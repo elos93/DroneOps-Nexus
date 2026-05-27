@@ -1,29 +1,38 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from 'recharts'
-import { CircleMarker, MapContainer, Popup, TileLayer } from 'react-leaflet'
+import { Circle, CircleMarker, MapContainer, Popup, TileLayer } from 'react-leaflet'
 import {
   Activity,
   BatteryCharging,
   Bell,
-  CloudSun,
+  BrainCircuit,
+  ClipboardList,
   MapPinned,
+  Moon,
   PlaneTakeoff,
   RadioTower,
   Route,
   Settings,
+  Stethoscope,
+  Sun,
+  Users,
 } from 'lucide-react'
 import { assessFlight, getOverview } from './api'
+import { AdvancedViews, type AdvancedView } from './AdvancedViews'
+import { ManagementViews, type View } from './ManagementViews'
 import type { Drone, Mission } from './types'
 
 function App() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['operations-overview'],
     queryFn: getOverview,
-    refetchInterval: 15000,
+    refetchInterval: 5000,
   })
   const [selectedMissionId, setSelectedMissionId] = useState<string>()
   const [selectedDroneId, setSelectedDroneId] = useState<string>()
+  const [view, setView] = useState<View | AdvancedView>('dashboard')
+  const [lightMode, setLightMode] = useState(false)
   const flightGate = useMutation({
     mutationFn: ({ droneId, missionId }: { droneId: string; missionId: string }) =>
       assessFlight(droneId, missionId),
@@ -51,18 +60,22 @@ function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${lightMode ? 'light-mode' : ''}`}>
       <aside className="sidebar">
         <div className="logo"><span className="logo-mark" /><div><strong>DroneOps</strong><small>NEXUS</small></div></div>
         <nav>
-          <a className="active"><Activity size={19} /> Dashboard</a>
-          <a><MapPinned size={19} /> Live Fleet</a>
-          <a><Route size={19} /> Missions</a>
-          <a><CloudSun size={19} /> Weather Gate</a>
-          <a><RadioTower size={19} /> Stations</a>
+          <button className={view === 'dashboard' ? 'active' : ''} onClick={() => setView('dashboard')}><Activity size={19} /> Dashboard</button>
+          <button className={view === 'drones' ? 'active' : ''} onClick={() => setView('drones')}><MapPinned size={19} /> Drones</button>
+          <button className={view === 'missions' ? 'active' : ''} onClick={() => setView('missions')}><Route size={19} /> Missions</button>
+          <button className={view === 'customers' ? 'active' : ''} onClick={() => setView('customers')}><Users size={19} /> Customers</button>
+          <button className={view === 'stations' ? 'active' : ''} onClick={() => setView('stations')}><RadioTower size={19} /> Stations</button>
+          <button className={view === 'intelligence' ? 'active' : ''} onClick={() => setView('intelligence')}><BrainCircuit size={19} /> Intelligence</button>
+          <button className={view === 'tracking' ? 'active' : ''} onClick={() => setView('tracking')}><MapPinned size={19} /> Tracking</button>
+          <button className={view === 'maintenance' ? 'active' : ''} onClick={() => setView('maintenance')}><Stethoscope size={19} /> Maintenance</button>
+          <button className={view === 'audit' ? 'active' : ''} onClick={() => setView('audit')}><ClipboardList size={19} /> Audit Log</button>
         </nav>
         <div className="sidebar-footer">
-          <a><Settings size={18} /> Settings</a>
+          <button onClick={() => setLightMode((enabled) => !enabled)}><Settings size={18} /> {lightMode ? 'Dark Mode' : 'Light Mode'}</button>
           <p>{data.storageMode === 'mongodb-atlas' ? 'MongoDB Atlas connected' : 'Demo mode - add Atlas URI'}</p>
         </div>
       </aside>
@@ -71,15 +84,19 @@ function App() {
         <header className="header">
           <div>
             <p className="eyebrow">Fleet Operations Platform</p>
-            <h1>Command Dashboard</h1>
-            <p className="subtitle">Live missions, weather-aware dispatch and fleet readiness</p>
+            <h1>{view === 'dashboard' ? 'Command Dashboard' : view[0].toUpperCase() + view.slice(1)}</h1>
+            <p className="subtitle">Live missions, weather-aware dispatch and complete operations management</p>
           </div>
           <div className="header-actions">
-            <button className="icon-button"><Bell size={18} /></button>
+            <button className="icon-button alert-button" onClick={() => setView('intelligence')}>
+              <Bell size={18} /><span>{data.alerts.length}</span>
+            </button>
+            <button className="icon-button" onClick={() => setLightMode((enabled) => !enabled)}>{lightMode ? <Moon size={18} /> : <Sun size={18} />}</button>
             <button className="primary" onClick={() => refetch()}>Refresh Live Data</button>
           </div>
         </header>
 
+        {view === 'dashboard' ? <>
         <section className="metrics">
           <Metric label="Total Drones" value={data.metrics.totalDrones} hint="Registered fleet" accent="blue" />
           <Metric label="Active Missions" value={data.metrics.activeMissions} hint="In progress" accent="cyan" />
@@ -96,6 +113,16 @@ function App() {
                 <CircleMarker key={station.id} center={[station.location.latitude, station.location.longitude]} radius={10} pathOptions={{ color: '#38bdf8', fillColor: '#0284c7', fillOpacity: 1 }}>
                   <Popup>{station.name} - {station.totalSlots - station.occupiedSlots} slots open</Popup>
                 </CircleMarker>
+              ))}
+              {data.noFlyZones.map((zone) => (
+                <Circle
+                  key={zone.id}
+                  center={[zone.center.latitude, zone.center.longitude]}
+                  radius={zone.radiusKm * 1000}
+                  pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.1, dashArray: '6 6' }}
+                >
+                  <Popup>{zone.name} - {zone.reason}</Popup>
+                </Circle>
               ))}
               {data.drones.map((drone) => (
                 <CircleMarker key={drone.id} center={[drone.location.latitude, drone.location.longitude]} radius={7} pathOptions={{ color: '#0b1221', fillColor: statusColor(drone.status), fillOpacity: 1 }}>
@@ -155,6 +182,9 @@ function App() {
             {data.drones.map((drone) => <DroneRow key={drone.id} drone={drone} />)}
           </article>
         </section>
+        </> : view === 'drones' || view === 'missions' || view === 'customers' || view === 'stations'
+          ? <ManagementViews view={view} overview={data} onRefresh={refetch} />
+          : <AdvancedViews view={view} overview={data} onRefresh={refetch} />}
       </main>
     </div>
   )

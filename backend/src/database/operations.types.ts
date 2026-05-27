@@ -7,6 +7,14 @@ export interface Location {
 export type DroneStatus = 'available' | 'charging' | 'mission';
 export type MissionStatus = 'pending' | 'assigned' | 'in-transit' | 'delivered';
 export type MissionPriority = 'standard' | 'urgent' | 'critical';
+export type AlertSeverity = 'info' | 'warning' | 'critical';
+
+export interface MissionEvent {
+  status: MissionStatus;
+  title: string;
+  timestamp: string;
+  detail: string;
+}
 
 export interface DroneRecord {
   id: string;
@@ -16,6 +24,12 @@ export interface DroneRecord {
   maxPayloadKg: number;
   location: Location;
   activeMissionId?: string;
+  chargingStationId?: string;
+  flightHours: number;
+  completedDeliveries: number;
+  batteryHealth: number;
+  nextServiceHours: number;
+  isActive?: boolean;
 }
 
 export interface StationRecord {
@@ -24,10 +38,22 @@ export interface StationRecord {
   location: Location;
   totalSlots: number;
   occupiedSlots: number;
+  isActive?: boolean;
+}
+
+export interface CustomerRecord {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  location: Location;
+  isActive?: boolean;
 }
 
 export interface MissionRecord {
   id: string;
+  senderCustomerId: string;
+  targetCustomerId: string;
   customer: string;
   origin: Location;
   destination: Location;
@@ -36,4 +62,35 @@ export interface MissionRecord {
   status: MissionStatus;
   droneId?: string;
   etaMinutes: number;
+  progressPercent: number;
+  trackingCode: string;
+  proofOfDeliveryCode: string;
+  timeline: MissionEvent[];
+  isActive?: boolean;
+}
+
+export interface AuditEventRecord {
+  id: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  actor: string;
+  timestamp: string;
+  detail: string;
+}
+
+export interface AlertRecord {
+  id: string;
+  severity: AlertSeverity;
+  title: string;
+  message: string;
+  entityId: string;
+}
+
+export interface NoFlyZone {
+  id: string;
+  name: string;
+  center: Location;
+  radiusKm: number;
+  reason: string;
 }

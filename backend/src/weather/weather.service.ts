@@ -1,4 +1,8 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { FlightGateDto } from './dto/flight-gate.dto';
 import { evaluateFlight, WindConditions } from './wind-policy';
 import { OperationsService } from '../operations/operations.service';
@@ -17,6 +21,18 @@ export class WeatherService {
       mission.destination.longitude,
     );
     return evaluateFlight(drone, mission, wind);
+  }
+
+  async dispatchFlight(dto: FlightGateDto) {
+    const assessment = await this.assessFlight(dto);
+    if (assessment.decision !== 'GO') {
+      throw new BadRequestException(assessment.reason);
+    }
+    await this.operations.assertRouteClear(dto.missionId);
+    const mission = await this.operations.assignMission(dto.missionId, {
+      droneId: dto.droneId,
+    });
+    return { assessment, mission };
   }
 
   private async getWind(

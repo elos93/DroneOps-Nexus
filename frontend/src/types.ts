@@ -15,10 +15,25 @@ export interface Drone {
   maxPayloadKg: number
   location: Location
   activeMissionId?: string
+  chargingStationId?: string
+  flightHours: number
+  completedDeliveries: number
+  batteryHealth: number
+  nextServiceHours: number
+  isActive?: boolean
+}
+
+export interface MissionEvent {
+  status: MissionStatus
+  title: string
+  timestamp: string
+  detail: string
 }
 
 export interface Mission {
   id: string
+  senderCustomerId: string
+  targetCustomerId: string
   customer: string
   origin: Location
   destination: Location
@@ -27,6 +42,11 @@ export interface Mission {
   status: MissionStatus
   droneId?: string
   etaMinutes: number
+  progressPercent: number
+  trackingCode: string
+  proofOfDeliveryCode?: string
+  timeline: MissionEvent[]
+  isActive?: boolean
 }
 
 export interface Station {
@@ -35,6 +55,16 @@ export interface Station {
   location: Location
   totalSlots: number
   occupiedSlots: number
+  isActive?: boolean
+}
+
+export interface Customer {
+  id: string
+  name: string
+  phone: string
+  email: string
+  location: Location
+  isActive?: boolean
 }
 
 export interface Overview {
@@ -49,6 +79,57 @@ export interface Overview {
   drones: Drone[]
   missions: Mission[]
   stations: Station[]
+  customers: Customer[]
+  alerts: Alert[]
+  analytics: {
+    deliveredMissions: number
+    fleetUtilizationPercent: number
+    chargingCapacityPercent: number
+    maintenanceDue: number
+  }
+  noFlyZones: NoFlyZone[]
+  auditEvents: AuditEvent[]
+}
+
+export interface Alert {
+  id: string
+  severity: 'info' | 'warning' | 'critical'
+  title: string
+  message: string
+  entityId: string
+}
+
+export interface NoFlyZone {
+  id: string
+  name: string
+  center: Location
+  radiusKm: number
+  reason: string
+}
+
+export interface AuditEvent {
+  id: string
+  action: string
+  entityType: string
+  entityId: string
+  actor: string
+  timestamp: string
+  detail: string
+}
+
+export interface Recommendation {
+  drone: Drone
+  score: number
+  approachKm: number
+  rationale: string
+}
+
+export interface TrackingResult {
+  mission: Mission
+  drone?: Drone
+  publicCode: string
+  demoConfirmationCode?: string
+  estimatedArrivalMinutes: number
 }
 
 export interface FlightAssessment {

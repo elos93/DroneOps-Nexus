@@ -10,4 +10,9 @@ export class WeatherController {
   flightGate(@Body() dto: FlightGateDto) {
     return this.weather.assessFlight(dto);
   }
+
+  @Post('dispatch')
+  dispatch(@Body() dto: FlightGateDto) {
+    return this.weather.dispatchFlight(dto);
+  }
 }

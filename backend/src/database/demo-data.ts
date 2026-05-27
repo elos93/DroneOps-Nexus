@@ -1,4 +1,10 @@
-import { DroneRecord, MissionRecord, StationRecord } from './operations.types';
+import {
+  AuditEventRecord,
+  CustomerRecord,
+  DroneRecord,
+  MissionRecord,
+  StationRecord,
+} from './operations.types';
 
 export const demoDrones: DroneRecord[] = [
   {
@@ -8,6 +14,11 @@ export const demoDrones: DroneRecord[] = [
     battery: 82,
     maxPayloadKg: 6,
     activeMissionId: 'MS-204',
+    flightHours: 82,
+    completedDeliveries: 148,
+    batteryHealth: 91,
+    nextServiceHours: 100,
+    isActive: true,
     location: {
       latitude: 32.064,
       longitude: 34.786,
@@ -20,7 +31,12 @@ export const demoDrones: DroneRecord[] = [
     status: 'available',
     battery: 94,
     maxPayloadKg: 4,
+    flightHours: 34,
+    completedDeliveries: 71,
+    batteryHealth: 97,
+    nextServiceHours: 100,
     location: { latitude: 32.071, longitude: 34.775, label: 'Central Hub' },
+    isActive: true,
   },
   {
     id: 'DX-22',
@@ -28,7 +44,12 @@ export const demoDrones: DroneRecord[] = [
     status: 'available',
     battery: 67,
     maxPayloadKg: 9,
+    flightHours: 96,
+    completedDeliveries: 204,
+    batteryHealth: 79,
+    nextServiceHours: 100,
     location: { latitude: 32.093, longitude: 34.79, label: 'North Station' },
+    isActive: true,
   },
   {
     id: 'DX-31',
@@ -36,17 +57,25 @@ export const demoDrones: DroneRecord[] = [
     status: 'charging',
     battery: 34,
     maxPayloadKg: 6,
+    flightHours: 48,
+    completedDeliveries: 90,
+    batteryHealth: 88,
+    nextServiceHours: 100,
     location: {
       latitude: 32.057,
       longitude: 34.781,
       label: 'Charging Bay Alpha',
     },
+    chargingStationId: 'ST-01',
+    isActive: true,
   },
 ];
 
 export const demoMissions: MissionRecord[] = [
   {
     id: 'MS-204',
+    senderCustomerId: 'CU-001',
+    targetCustomerId: 'CU-002',
     customer: 'MedExpress',
     origin: { latitude: 32.07, longitude: 34.78, label: 'Central Warehouse' },
     destination: { latitude: 32.091, longitude: 34.812, label: 'North Clinic' },
@@ -55,9 +84,35 @@ export const demoMissions: MissionRecord[] = [
     status: 'in-transit',
     droneId: 'DX-18',
     etaMinutes: 6,
+    progressPercent: 68,
+    trackingCode: 'TRACK-MS204',
+    proofOfDeliveryCode: '4204',
+    timeline: [
+      {
+        status: 'pending',
+        title: 'Mission created',
+        timestamp: '2026-05-27T08:30:00.000Z',
+        detail: 'Critical medical package entered the queue.',
+      },
+      {
+        status: 'assigned',
+        title: 'Drone assigned',
+        timestamp: '2026-05-27T08:32:00.000Z',
+        detail: 'DX-18 passed dispatch checks.',
+      },
+      {
+        status: 'in-transit',
+        title: 'Package collected',
+        timestamp: '2026-05-27T08:37:00.000Z',
+        detail: 'Drone departed for North Clinic.',
+      },
+    ],
+    isActive: true,
   },
   {
     id: 'MS-207',
+    senderCustomerId: 'CU-003',
+    targetCustomerId: 'CU-004',
     customer: 'TechPoint',
     origin: { latitude: 32.057, longitude: 34.777, label: 'Logistics Hub' },
     destination: { latitude: 32.083, longitude: 34.797, label: 'Ramat Aviv' },
@@ -65,9 +120,23 @@ export const demoMissions: MissionRecord[] = [
     priority: 'urgent',
     status: 'pending',
     etaMinutes: 11,
+    progressPercent: 0,
+    trackingCode: 'TRACK-MS207',
+    proofOfDeliveryCode: '4207',
+    timeline: [
+      {
+        status: 'pending',
+        title: 'Mission created',
+        timestamp: '2026-05-27T09:00:00.000Z',
+        detail: 'Delivery is waiting for dispatch clearance.',
+      },
+    ],
+    isActive: true,
   },
   {
     id: 'MS-208',
+    senderCustomerId: 'CU-005',
+    targetCustomerId: 'CU-006',
     customer: 'Green Market',
     origin: { latitude: 32.065, longitude: 34.77, label: 'South Depot' },
     destination: { latitude: 32.104, longitude: 34.806, label: 'North Point' },
@@ -75,6 +144,18 @@ export const demoMissions: MissionRecord[] = [
     priority: 'standard',
     status: 'pending',
     etaMinutes: 16,
+    progressPercent: 0,
+    trackingCode: 'TRACK-MS208',
+    proofOfDeliveryCode: '4208',
+    timeline: [
+      {
+        status: 'pending',
+        title: 'Mission created',
+        timestamp: '2026-05-27T09:10:00.000Z',
+        detail: 'Delivery is waiting for an available cargo drone.',
+      },
+    ],
+    isActive: true,
   },
 ];
 
@@ -85,6 +166,7 @@ export const demoStations: StationRecord[] = [
     totalSlots: 8,
     occupiedSlots: 3,
     location: { latitude: 32.071, longitude: 34.775, label: 'Central Hub' },
+    isActive: true,
   },
   {
     id: 'ST-02',
@@ -92,5 +174,78 @@ export const demoStations: StationRecord[] = [
     totalSlots: 5,
     occupiedSlots: 1,
     location: { latitude: 32.093, longitude: 34.79, label: 'North Station' },
+    isActive: true,
+  },
+];
+
+export const demoCustomers: CustomerRecord[] = [
+  {
+    id: 'CU-001',
+    name: 'MedExpress',
+    phone: '052-100-1001',
+    email: 'dispatch@medexpress.io',
+    location: { latitude: 32.07, longitude: 34.78, label: 'Central Warehouse' },
+    isActive: true,
+  },
+  {
+    id: 'CU-002',
+    name: 'North Clinic',
+    phone: '052-100-1002',
+    email: 'desk@northclinic.io',
+    location: { latitude: 32.091, longitude: 34.812, label: 'North Clinic' },
+    isActive: true,
+  },
+  {
+    id: 'CU-003',
+    name: 'TechPoint',
+    phone: '052-100-1003',
+    email: 'ops@techpoint.io',
+    location: { latitude: 32.057, longitude: 34.777, label: 'Logistics Hub' },
+    isActive: true,
+  },
+  {
+    id: 'CU-004',
+    name: 'Ramat Aviv Office',
+    phone: '052-100-1004',
+    email: 'office@ramataviv.io',
+    location: { latitude: 32.083, longitude: 34.797, label: 'Ramat Aviv' },
+    isActive: true,
+  },
+  {
+    id: 'CU-005',
+    name: 'Green Market',
+    phone: '052-100-1005',
+    email: 'orders@greenmarket.io',
+    location: { latitude: 32.065, longitude: 34.77, label: 'South Depot' },
+    isActive: true,
+  },
+  {
+    id: 'CU-006',
+    name: 'North Point',
+    phone: '052-100-1006',
+    email: 'receive@northpoint.io',
+    location: { latitude: 32.104, longitude: 34.806, label: 'North Point' },
+    isActive: true,
+  },
+];
+
+export const demoAuditEvents: AuditEventRecord[] = [
+  {
+    id: 'EV-001',
+    action: 'DISPATCH_APPROVED',
+    entityType: 'mission',
+    entityId: 'MS-204',
+    actor: 'Operations Control',
+    timestamp: '2026-05-27T08:32:00.000Z',
+    detail: 'DX-18 assigned after flight safety review.',
+  },
+  {
+    id: 'EV-002',
+    action: 'CHARGE_STARTED',
+    entityType: 'drone',
+    entityId: 'DX-31',
+    actor: 'Fleet Automation',
+    timestamp: '2026-05-27T08:46:00.000Z',
+    detail: 'Drone entered Charging Bay Alpha.',
   },
 ];
