@@ -18,6 +18,7 @@ The system is designed for an operations team managing last-mile drone deliverie
 - Battery-readiness visualization.
 - Live map for drones and charging stations.
 - Restricted no-fly zones displayed on the map.
+- Authenticated control-center entry for administrator, dispatcher and customer demo roles.
 
 ### Delivery Management
 
@@ -36,6 +37,8 @@ The system is designed for an operations team managing last-mile drone deliverie
 - Utilization and charging-capacity indicators.
 - Six-hour Open-Meteo forecast windows for dispatch scheduling.
 - Notification channel routing preview for critical operational events.
+- Geofence editor for adding or removing active no-fly zones.
+- Mission telemetry simulator that moves an assigned drone along its route.
 
 ### Customer Tracking
 
@@ -57,7 +60,9 @@ The system is designed for an operations team managing last-mile drone deliverie
 - Audit log of operational activity.
 - Safe public API responses that do not expose delivery confirmation codes.
 - Light and dark display themes.
-- Admin, dispatcher and customer role-preview navigation flows.
+- Server-side role-based access control for sensitive write operations.
+- Built-in API documentation at `/api/docs` and `/api/openapi.json`.
+- Installable PWA shell for mobile and desktop.
 - GitHub Actions validation for linting, builds and automated tests.
 
 ## Technology Stack
@@ -94,7 +99,7 @@ NestJS Operations API (Vercel Serverless)
 ## Production Next Steps
 
 - Configure MongoDB Atlas credentials for persistent cloud data.
-- Add authentication and role-based authorization for administrator, dispatcher and customer users.
+- Replace demo users with a production identity provider and rotate `AUTH_SECRET`.
 - Connect a real SMS or email provider for delivery confirmation codes.
 - Replace demo notification previews with a provider-backed delivery and retry queue.
 - Add a custom domain and monitoring for a production release.

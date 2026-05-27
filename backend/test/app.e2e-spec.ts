@@ -6,6 +6,7 @@ import { AppModule } from './../src/app.module';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
+  let adminToken: string;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -18,6 +19,11 @@ describe('AppController (e2e)', () => {
       new ValidationPipe({ whitelist: true, transform: true }),
     );
     await app.init();
+    const login = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email: 'admin@droneops.demo', password: 'AdminDemo!2026' })
+      .expect(201);
+    adminToken = (login.body as { accessToken: string }).accessToken;
   });
 
   it('/api/health (GET)', () => {
@@ -99,14 +105,17 @@ describe('AppController (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/api/operations/customers')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send(sender)
       .expect(201);
     await request(app.getHttpServer())
       .post('/api/operations/customers')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send(target)
       .expect(201);
     await request(app.getHttpServer())
       .post('/api/operations/stations')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         id: 'ST-900',
         name: 'Test Charging Hub',
@@ -116,6 +125,7 @@ describe('AppController (e2e)', () => {
       .expect(201);
     await request(app.getHttpServer())
       .post('/api/operations/drones')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         id: 'DX-900',
         model: 'Test Lift',
@@ -126,6 +136,7 @@ describe('AppController (e2e)', () => {
       .expect(201);
     await request(app.getHttpServer())
       .post('/api/operations/missions')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         id: 'MS-900',
         senderCustomerId: sender.id,
@@ -144,20 +155,25 @@ describe('AppController (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/api/operations/missions/MS-900/assign')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ droneId: 'DX-900' })
       .expect(201);
     await request(app.getHttpServer())
       .post('/api/operations/missions/MS-900/pickup')
+      .set('Authorization', `Bearer ${adminToken}`)
       .expect(201);
     await request(app.getHttpServer())
       .post('/api/operations/missions/MS-900/deliver')
+      .set('Authorization', `Bearer ${adminToken}`)
       .expect(201);
     await request(app.getHttpServer())
       .post('/api/operations/drones/DX-900/charge')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ stationId: 'ST-900' })
       .expect(201);
     await request(app.getHttpServer())
       .post('/api/operations/drones/DX-900/release-charge')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ minutes: 10 })
       .expect(201)
       .expect(({ body }: { body: { status: string; battery: number } }) => {
@@ -190,6 +206,7 @@ describe('AppController (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/api/operations/drones/DX-900/service')
+      .set('Authorization', `Bearer ${adminToken}`)
       .expect(201)
       .expect(({ body }: { body: { batteryHealth: number } }) => {
         expect(body.batteryHealth).toBe(100);
@@ -198,6 +215,7 @@ describe('AppController (e2e)', () => {
     let proofCode = '';
     await request(app.getHttpServer())
       .post('/api/operations/missions')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         id: 'MS-901',
         senderCustomerId: sender.id,
@@ -213,10 +231,12 @@ describe('AppController (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/api/operations/missions/MS-901/assign')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ droneId: 'DX-900' })
       .expect(201);
     await request(app.getHttpServer())
       .post('/api/operations/missions/MS-901/simulate-step')
+      .set('Authorization', `Bearer ${adminToken}`)
       .expect(201);
     await request(app.getHttpServer())
       .post('/api/operations/missions/MS-901/confirm-delivery')
@@ -245,6 +265,7 @@ describe('AppController (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/api/operations/drones/DX-18/emergency-return')
+      .set('Authorization', `Bearer ${adminToken}`)
       .expect(201)
       .expect(({ body }: { body: { activeMissionId?: string } }) => {
         expect(body.activeMissionId).toBeUndefined();
@@ -290,6 +311,38 @@ describe('AppController (e2e)', () => {
           expect(body.roleCapabilities.admin).toContain('manage fleet');
         },
       );
+  });
+
+  it('protects operational writes and documents the API', async () => {
+    await request(app.getHttpServer())
+      .post('/api/operations/drones')
+      .send({
+        id: 'DX-LOCK',
+        model: 'Locked',
+        battery: 100,
+        maxPayloadKg: 1,
+        location: { latitude: 32.07, longitude: 34.78, label: 'Locked' },
+      })
+      .expect(401);
+
+    await request(app.getHttpServer())
+      .post('/api/operations/no-fly-zones')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        id: 'NFZ-TEST',
+        name: 'Temporary Test Zone',
+        center: { latitude: 32.08, longitude: 34.79, label: 'Test zone' },
+        radiusKm: 0.2,
+        reason: 'Automated test zone.',
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .get('/api/openapi.json')
+      .expect(200)
+      .expect(({ body }: { body: { info: { title: string } } }) => {
+        expect(body.info.title).toBe('DroneOps Nexus API');
+      });
   });
 
   afterEach(async () => {

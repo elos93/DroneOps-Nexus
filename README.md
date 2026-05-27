@@ -25,6 +25,7 @@ The hosted demo currently runs with seeded in-memory operations data. MongoDB At
 
 - Modern command dashboard with fleet metrics, mission queue and battery analytics.
 - Public product landing page and customer booking portal with instant route pricing.
+- Secure demo authentication with administrator, dispatcher and customer roles.
 - Medical priority delivery mode with temperature-controlled shipment indication.
 - Live map view for drones and charging stations.
 - Weather Flight Gate that evaluates wind, gusts, payload and battery reserve.
@@ -41,6 +42,11 @@ The hosted demo currently runs with seeded in-memory operations data. MongoDB At
 - Smart route calculation with bypass waypoint planning around restricted corridors.
 - Operational audit log, light/dark themes and guided live demo progression.
 - Role-preview experience for administrator, dispatcher and customer product flows.
+- Server-side RBAC protection for fleet changes, dispatch and geofence management.
+- Managed no-fly-zone editor with Atlas persistence when `MONGODB_URI` is configured.
+- Mission telemetry simulator that moves drones along active delivery routes.
+- PWA support with installable manifest and offline app shell.
+- Built-in API documentation at [`/api/docs`](https://droneops-nexus-api.vercel.app/api/docs) and schema at [`/api/openapi.json`](https://droneops-nexus-api.vercel.app/api/openapi.json).
 - Notification routing preview for in-app, SMS and email escalation channels.
 - GitHub Actions quality gate for lint, builds, unit tests and API integration tests.
 - Emergency Return Home command that recalls an active drone and safely requeues its mission.
@@ -101,12 +107,17 @@ Never commit real MongoDB credentials to Git.
 The application is fully demonstrable without cloud credentials. For a production deployment:
 
 - Configure `MONGODB_URI` to persist fleet, timeline and audit information in Atlas.
-- Connect a real authentication provider and server-side authorization. The current role selector is a product-flow preview, not a security boundary.
+- Replace demo authentication users with a real identity provider such as Clerk, Auth0 or a managed enterprise SSO when moving beyond portfolio/demo mode.
+- Set a strong `AUTH_SECRET` in production. The public demo falls back to a clearly marked demo secret.
 - Connect an SMS or email provider for actual notification delivery. Current channel routing is a demonstration preview, and in demo-memory mode only the tracking screen displays its demo code.
 
 ## API
 
 - `GET /api/health`
+- `GET /api/docs`
+- `GET /api/openapi.json`
+- `POST /api/auth/login`
+- `GET /api/auth/me`
 - `GET /api/operations/overview`
 - `POST /api/operations/public/quote`
 - `POST /api/operations/public/orders`
@@ -126,6 +137,9 @@ The application is fully demonstrable without cloud credentials. For a productio
 - `POST /api/operations/missions/:id/simulate-step`
 - `GET /api/operations/tracking/:id`
 - `GET /api/operations/recommendations/:missionId`
+- `POST /api/operations/no-fly-zones`
+- `DELETE /api/operations/no-fly-zones/:id`
+- `POST /api/operations/missions/:id/telemetry-step`
 - `POST /api/operations/drones/:id/service`
 - `POST /api/operations/drones/:id/emergency-return`
 - `POST /api/weather/flight-gate`

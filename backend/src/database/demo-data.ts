@@ -3,6 +3,7 @@ import {
   CustomerRecord,
   DroneRecord,
   MissionRecord,
+  NoFlyZone,
   StationRecord,
 } from './operations.types';
 
@@ -256,5 +257,28 @@ export const demoAuditEvents: AuditEventRecord[] = [
     actor: 'Fleet Automation',
     timestamp: '2026-05-27T08:46:00.000Z',
     detail: 'Drone entered Charging Bay Alpha.',
+  },
+];
+
+export const demoNoFlyZones: NoFlyZone[] = [
+  {
+    id: 'NFZ-01',
+    name: 'Sde Dov Restricted Corridor',
+    center: {
+      latitude: 32.103,
+      longitude: 34.79,
+      label: 'Restricted airspace',
+    },
+    radiusKm: 0.7,
+    reason: 'Controlled airspace - reroute required.',
+    isActive: true,
+  },
+  {
+    id: 'NFZ-02',
+    name: 'Emergency Helipad Buffer',
+    center: { latitude: 32.081, longitude: 34.79, label: 'Hospital helipad' },
+    radiusKm: 0.35,
+    reason: 'Medical flight priority zone.',
+    isActive: true,
   },
 ];

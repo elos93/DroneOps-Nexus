@@ -3,6 +3,20 @@ export type MissionStatus = 'pending' | 'assigned' | 'in-transit' | 'delivered'
 export type ServiceType = 'standard' | 'medical'
 export type Role = 'admin' | 'dispatcher' | 'customer'
 
+export interface AuthUser {
+  id: string
+  name: string
+  email: string
+  role: Role
+}
+
+export interface AuthSession {
+  accessToken: string
+  user: AuthUser
+  expiresInSeconds: number
+  authenticationMode: 'configured-secret' | 'demo-secret'
+}
+
 export interface Location {
   latitude: number
   longitude: number
@@ -93,6 +107,10 @@ export interface Overview {
   roleCapabilities: Record<Role, string[]>
   analytics: {
     deliveredMissions: number
+    pendingRevenueIls: number
+    medicalMissions: number
+    averagePayloadKg: number
+    averageRouteKm: number
     fleetUtilizationPercent: number
     chargingCapacityPercent: number
     maintenanceDue: number
@@ -120,6 +138,7 @@ export interface NoFlyZone {
   center: Location
   radiusKm: number
   reason: string
+  isActive?: boolean
 }
 
 export interface AuditEvent {
@@ -210,4 +229,12 @@ export interface ForecastResult {
     gustKmh: number
     recommendation: string
   }
+}
+
+export interface NoFlyZoneInput {
+  id: string
+  name: string
+  center: Location
+  radiusKm: number
+  reason: string
 }

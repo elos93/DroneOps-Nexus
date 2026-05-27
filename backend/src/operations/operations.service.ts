@@ -21,6 +21,7 @@ import {
   CreateCustomerDto,
   CreateDroneDto,
   CreateMissionDto,
+  CreateNoFlyZoneDto,
   CreatePublicOrderDto,
   CreateStationDto,
   QuoteOrderDto,
@@ -30,41 +31,21 @@ import {
   UpdateStationDto,
 } from './dto/operations.dto';
 
-const noFlyZones: NoFlyZone[] = [
-  {
-    id: 'NFZ-01',
-    name: 'Sde Dov Restricted Corridor',
-    center: {
-      latitude: 32.103,
-      longitude: 34.79,
-      label: 'Restricted airspace',
-    },
-    radiusKm: 0.7,
-    reason: 'Controlled airspace - reroute required.',
-  },
-  {
-    id: 'NFZ-02',
-    name: 'Emergency Helipad Buffer',
-    center: { latitude: 32.081, longitude: 34.79, label: 'Hospital helipad' },
-    radiusKm: 0.35,
-    reason: 'Medical flight priority zone.',
-  },
-];
-
 @Injectable()
 export class OperationsService {
   constructor(private readonly database: DatabaseService) {}
 
   async getOverview() {
-    const [drones, missions, stations, customers, auditEvents] =
+    const [drones, missions, stations, customers, auditEvents, noFlyZones] =
       await Promise.all([
         this.database.getDrones(),
         this.database.getMissions(),
         this.database.getStations(),
         this.database.getCustomers(),
         this.database.getAuditEvents(),
+        this.database.getNoFlyZones(),
       ]);
-    const alerts = this.buildAlerts(drones, missions, stations);
+    const alerts = this.buildAlerts(drones, missions, stations, noFlyZones);
 
     return {
       storageMode: this.database.getStorageMode(),
@@ -98,6 +79,30 @@ export class OperationsService {
         deliveredMissions: missions.filter(
           (mission) => mission.status === 'delivered',
         ).length,
+        pendingRevenueIls: missions
+          .filter((mission) => mission.status !== 'delivered')
+          .reduce((sum, mission) => sum + (mission.priceIls ?? 0), 0),
+        medicalMissions: missions.filter(
+          (mission) => mission.serviceType === 'medical',
+        ).length,
+        averagePayloadKg:
+          Math.round(
+            (missions.reduce((sum, mission) => sum + mission.payloadKg, 0) /
+              Math.max(missions.length, 1)) *
+              10,
+          ) / 10,
+        averageRouteKm:
+          Math.round(
+            (missions.reduce(
+              (sum, mission) => sum + (mission.routeDistanceKm ?? 0),
+              0,
+            ) /
+              Math.max(
+                missions.filter((mission) => mission.routeDistanceKm).length,
+                1,
+              )) *
+              10,
+          ) / 10,
         fleetUtilizationPercent: Math.round(
           (drones.filter((drone) => drone.status === 'mission').length /
             Math.max(drones.length, 1)) *
@@ -140,8 +145,12 @@ export class OperationsService {
     return this.database.getCustomers();
   }
 
-  quoteOrder(dto: QuoteOrderDto): QuoteResult {
-    const route = this.planRoute(dto.origin, dto.destination);
+  async quoteOrder(dto: QuoteOrderDto): Promise<QuoteResult> {
+    const route = this.planRoute(
+      dto.origin,
+      dto.destination,
+      await this.database.getNoFlyZones(),
+    );
     const priorityFactor =
       dto.priority === 'critical' ? 1.6 : dto.priority === 'urgent' ? 1.28 : 1;
     const medicalFactor = dto.serviceType === 'medical' ? 1.45 : 1;
@@ -172,7 +181,7 @@ export class OperationsService {
     const senderId = `CU-S${suffix}`;
     const targetId = `CU-R${suffix}`;
     const missionId = `WEB-${suffix}`;
-    const quote = this.quoteOrder(dto);
+    const quote = await this.quoteOrder(dto);
     await Promise.all([
       this.database.saveCustomer({
         id: senderId,
@@ -295,7 +304,10 @@ export class OperationsService {
   }
 
   async assertRouteClear(missionId: string) {
-    const mission = await this.findMission(missionId);
+    const [mission, noFlyZones] = await Promise.all([
+      this.findMission(missionId),
+      this.database.getNoFlyZones(),
+    ]);
     const destinationZone = noFlyZones.find(
       (item) =>
         this.distanceKm(item.center, mission.destination) <= item.radiusKm,
@@ -305,7 +317,11 @@ export class OperationsService {
         `Destination is inside ${destinationZone.name}. ${destinationZone.reason}`,
       );
     }
-    const route = this.planRoute(mission.origin, mission.destination);
+    const route = this.planRoute(
+      mission.origin,
+      mission.destination,
+      noFlyZones,
+    );
     await this.database.saveMission({
       ...mission,
       routeDistanceKm: route.distanceKm,
@@ -492,7 +508,7 @@ export class OperationsService {
       this.findCustomer(dto.senderCustomerId),
       this.findCustomer(dto.targetCustomerId),
     ]);
-    const quote = this.quoteOrder({
+    const quote = await this.quoteOrder({
       origin: sender.location,
       destination: target.location,
       payloadKg: dto.payloadKg,
@@ -536,6 +552,33 @@ export class OperationsService {
     await this.database.deactivateMission(id);
     await this.audit('MISSION_DEACTIVATED', 'mission', id, 'Delivery removed.');
     return { message: `Mission ${id} deactivated.` };
+  }
+
+  async createNoFlyZone(dto: CreateNoFlyZoneDto) {
+    if (
+      (await this.database.getNoFlyZones()).some((zone) => zone.id === dto.id)
+    ) {
+      throw new ConflictException(`No-fly zone ${dto.id} already exists.`);
+    }
+    const zone = await this.database.saveNoFlyZone({ ...dto, isActive: true });
+    await this.audit(
+      'NO_FLY_ZONE_CREATED',
+      'no-fly-zone',
+      dto.id,
+      `${dto.name} added to route planning.`,
+    );
+    return zone;
+  }
+
+  async removeNoFlyZone(id: string) {
+    await this.database.deactivateNoFlyZone(id);
+    await this.audit(
+      'NO_FLY_ZONE_DEACTIVATED',
+      'no-fly-zone',
+      id,
+      'Restricted zone removed from active planning.',
+    );
+    return { message: `No-fly zone ${id} deactivated.` };
   }
 
   async assignMission(id: string, dto: AssignMissionDto) {
@@ -668,6 +711,73 @@ export class OperationsService {
     throw new BadRequestException(
       'Simulation is available after a drone has been assigned.',
     );
+  }
+
+  async advanceMissionTelemetry(id: string) {
+    const mission = await this.findMission(id);
+    if (!mission.droneId) {
+      throw new BadRequestException('Mission must have an assigned drone.');
+    }
+    if (mission.status === 'pending') {
+      throw new BadRequestException('Dispatch the mission before simulation.');
+    }
+    const drone = await this.findDrone(mission.droneId);
+    const route = [
+      mission.origin,
+      ...(mission.routeWaypoints ?? []),
+      mission.destination,
+    ];
+    const nextProgress =
+      mission.status === 'assigned'
+        ? 28
+        : Math.min(100, mission.progressPercent + 18);
+    const location = this.interpolateRoute(route, nextProgress / 100);
+    const delivered = nextProgress >= 100;
+    await Promise.all([
+      this.database.saveMission({
+        ...mission,
+        status: delivered ? 'delivered' : 'in-transit',
+        progressPercent: nextProgress,
+        timeline: [
+          ...mission.timeline,
+          this.timelineEvent(
+            delivered ? 'delivered' : 'in-transit',
+            delivered ? 'Simulation delivery completed' : 'Live telemetry step',
+            delivered
+              ? 'Drone reached destination in simulation mode.'
+              : `Drone advanced to ${location.label}.`,
+          ),
+        ],
+      }),
+      this.database.saveDrone({
+        ...drone,
+        status: delivered ? 'available' : 'mission',
+        activeMissionId: delivered ? undefined : mission.id,
+        location,
+        battery: Math.max(0, drone.battery - (delivered ? 8 : 4)),
+        flightHours: delivered
+          ? Math.round((drone.flightHours + 0.5) * 10) / 10
+          : drone.flightHours,
+        completedDeliveries: delivered
+          ? drone.completedDeliveries + 1
+          : drone.completedDeliveries,
+      }),
+    ]);
+    await this.audit(
+      'TELEMETRY_ADVANCED',
+      'mission',
+      id,
+      `${mission.droneId} moved to ${nextProgress}% route progress.`,
+    );
+    return {
+      mission: this.publicMission(await this.findMission(id)),
+      drone: await this.findDrone(mission.droneId),
+      telemetry: {
+        progressPercent: nextProgress,
+        location,
+        route,
+      },
+    };
   }
 
   async sendDroneToCharge(id: string, dto: ChargeDroneDto) {
@@ -815,6 +925,7 @@ export class OperationsService {
     drones: DroneRecord[],
     missions: MissionRecord[],
     stations: Awaited<ReturnType<DatabaseService['getStations']>>,
+    noFlyZones: NoFlyZone[],
   ): AlertRecord[] {
     const alerts: AlertRecord[] = [];
     drones.forEach((drone) => {
@@ -901,7 +1012,33 @@ export class OperationsService {
     return 6371 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
   }
 
-  private planRoute(origin: Location, destination: Location) {
+  private interpolateRoute(route: Location[], progress: number): Location {
+    if (route.length === 0) {
+      throw new BadRequestException('Route has no points.');
+    }
+    if (route.length === 1) return route[0];
+    const clamped = Math.min(1, Math.max(0, progress));
+    const segment = Math.min(
+      route.length - 2,
+      Math.floor(clamped * (route.length - 1)),
+    );
+    const localProgress = clamped * (route.length - 1) - segment;
+    const start = route[segment];
+    const end = route[segment + 1];
+    return {
+      latitude:
+        start.latitude + (end.latitude - start.latitude) * localProgress,
+      longitude:
+        start.longitude + (end.longitude - start.longitude) * localProgress,
+      label: `${Math.round(clamped * 100)}% along route`,
+    };
+  }
+
+  private planRoute(
+    origin: Location,
+    destination: Location,
+    noFlyZones: NoFlyZone[],
+  ) {
     const directDistance = this.distanceKm(origin, destination);
     const midpoint = {
       latitude: (origin.latitude + destination.latitude) / 2,

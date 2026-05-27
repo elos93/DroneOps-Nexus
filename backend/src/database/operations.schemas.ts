@@ -119,3 +119,15 @@ export const AuditEventSchema = new Schema(
   },
   { timestamps: true },
 );
+
+export const NoFlyZoneSchema = new Schema(
+  {
+    id: { type: String, required: true, unique: true, index: true },
+    name: { type: String, required: true },
+    center: { type: LocationSchema, required: true },
+    radiusKm: { type: Number, required: true },
+    reason: { type: String, required: true },
+    isActive: { type: Boolean, default: true },
+  },
+  { timestamps: true },
+);

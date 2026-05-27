@@ -1,0 +1,16 @@
+{
+  "name": "DroneOps Nexus",
+  "short_name": "DroneOps",
+  "description": "Fleet operations platform for drone delivery control.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070f1e",
+  "theme_color": "#22d3ee",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

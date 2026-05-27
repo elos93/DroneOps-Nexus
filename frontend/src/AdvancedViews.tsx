@@ -9,16 +9,21 @@ import {
   Printer,
   ShieldAlert,
   Stethoscope,
+  Plus,
+  Trash2,
 } from 'lucide-react'
 import {
+  advanceTelemetry,
   completeDroneService,
   confirmDelivery,
+  createNoFlyZone,
+  deleteNoFlyZone,
   getRecommendations,
   getForecast,
   getTracking,
   simulateMissionStep,
 } from './api'
-import type { Overview } from './types'
+import type { NoFlyZoneInput, Overview, Role } from './types'
 
 export type AdvancedView = 'intelligence' | 'tracking' | 'maintenance' | 'audit'
 
@@ -26,17 +31,29 @@ type Props = {
   view: AdvancedView
   overview: Overview
   onRefresh: () => Promise<unknown> | unknown
+  role: Role
 }
 
-export function AdvancedViews({ view, overview, onRefresh }: Props) {
-  if (view === 'intelligence') return <IntelligenceView overview={overview} />
-  if (view === 'tracking') return <TrackingView overview={overview} onRefresh={onRefresh} />
+export function AdvancedViews({ view, overview, onRefresh, role }: Props) {
+  if (view === 'intelligence') return <IntelligenceView overview={overview} onRefresh={onRefresh} role={role} />
+  if (view === 'tracking') return <TrackingView overview={overview} onRefresh={onRefresh} role={role} />
   if (view === 'maintenance') return <MaintenanceView overview={overview} onRefresh={onRefresh} />
   return <AuditView overview={overview} />
 }
 
-function IntelligenceView({ overview }: Pick<Props, 'overview'>) {
+function IntelligenceView({ overview, onRefresh, role }: Pick<Props, 'overview' | 'onRefresh' | 'role'>) {
   const pending = overview.missions.filter((mission) => mission.status === 'pending')
+  const [zoneDraft, setZoneDraft] = useState<NoFlyZoneInput>({
+    id: `NFZ-${overview.noFlyZones.length + 100}`,
+    name: 'New restricted corridor',
+    center: { latitude: 32.087, longitude: 34.799, label: 'Custom zone' },
+    radiusKm: 0.25,
+    reason: 'Temporary operations restriction.',
+  })
+  const zoneAction = useMutation({
+    mutationFn: (run: () => Promise<unknown>) => run(),
+    onSuccess: () => onRefresh(),
+  })
   const [missionId, setMissionId] = useState(pending[0]?.id ?? '')
   const recommendations = useQuery({
     queryKey: ['recommendations', missionId],
@@ -90,12 +107,24 @@ function IntelligenceView({ overview }: Pick<Props, 'overview'>) {
       </div>
       <article className="panel">
         <h3 className="section-heading"><MapPinned size={17} /> No-Fly Zones</h3>
+        {role === 'admin' && (
+          <form className="geofence-form" onSubmit={(event) => {
+            event.preventDefault()
+            zoneAction.mutate(() => createNoFlyZone(zoneDraft))
+          }}>
+            <input value={zoneDraft.id} onChange={(event) => setZoneDraft({ ...zoneDraft, id: event.target.value })} />
+            <input value={zoneDraft.name} onChange={(event) => setZoneDraft({ ...zoneDraft, name: event.target.value })} />
+            <input type="number" step="0.01" value={zoneDraft.radiusKm} onChange={(event) => setZoneDraft({ ...zoneDraft, radiusKm: Number(event.target.value) })} />
+            <button className="action"><Plus size={14} /> Add Geofence</button>
+          </form>
+        )}
         <div className="zone-grid">
           {overview.noFlyZones.map((zone) => (
             <div className="zone" key={zone.id}>
               <strong>{zone.name}</strong>
               <span>{zone.radiusKm} km protected radius</span>
               <p>{zone.reason}</p>
+              {role === 'admin' && <button className="action danger" onClick={() => zoneAction.mutate(() => deleteNoFlyZone(zone.id))}><Trash2 size={14} /> Remove</button>}
             </div>
           ))}
         </div>
@@ -128,7 +157,7 @@ function IntelligenceView({ overview }: Pick<Props, 'overview'>) {
   )
 }
 
-function TrackingView({ overview, onRefresh }: Pick<Props, 'overview' | 'onRefresh'>) {
+function TrackingView({ overview, onRefresh, role }: Pick<Props, 'overview' | 'onRefresh' | 'role'>) {
   const [missionId, setMissionId] = useState(overview.missions[0]?.id ?? '')
   const [confirmationCode, setConfirmationCode] = useState('')
   const tracking = useQuery({
@@ -165,9 +194,14 @@ function TrackingView({ overview, onRefresh }: Pick<Props, 'overview' | 'onRefre
             <div className="progress"><span style={{ width: `${result.mission.progressPercent}%` }} /></div>
             <strong>{result.mission.progressPercent}% complete</strong>
             {result.drone && <p>Drone: {result.drone.id} | Battery: {result.drone.battery}%</p>}
-            {result.mission.status === 'assigned' || result.mission.status === 'in-transit' ? (
+            {role !== 'customer' && (result.mission.status === 'assigned' || result.mission.status === 'in-transit') ? (
               <button className="primary demo-button" onClick={() => action.mutate(() => simulateMissionStep(result.mission.id))}>
-                Run Live Demo Step
+                Run Lifecycle Step
+              </button>
+            ) : null}
+            {role !== 'customer' && (result.mission.status === 'assigned' || result.mission.status === 'in-transit') ? (
+              <button className="action demo-button" onClick={() => action.mutate(() => advanceTelemetry(result.mission.id))}>
+                Move drone on route
               </button>
             ) : null}
             {result.mission.status === 'in-transit' && (

@@ -1,4 +1,6 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '../auth/auth.guard';
+import { Roles } from '../auth/roles.decorator';
 import { FlightGateDto } from './dto/flight-gate.dto';
 import { WeatherService } from './weather.service';
 
@@ -12,6 +14,8 @@ export class WeatherController {
   }
 
   @Post('dispatch')
+  @UseGuards(AuthGuard)
+  @Roles('admin', 'dispatcher')
   dispatch(@Body() dto: FlightGateDto) {
     return this.weather.dispatchFlight(dto);
   }

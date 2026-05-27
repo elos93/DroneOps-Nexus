@@ -100,6 +100,7 @@ export interface NoFlyZone {
   center: Location;
   radiusKm: number;
   reason: string;
+  isActive?: boolean;
 }
 
 export interface QuoteResult {

@@ -227,3 +227,25 @@ export class CreatePublicOrderDto extends QuoteOrderDto {
   @IsNotEmpty()
   recipientPhone!: string;
 }
+
+export class CreateNoFlyZoneDto {
+  @IsString()
+  @IsNotEmpty()
+  id!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+
+  @ValidateNested()
+  @Type(() => LocationDto)
+  center!: LocationDto;
+
+  @IsNumber()
+  @Min(0.05)
+  radiusKm!: number;
+
+  @IsString()
+  @IsNotEmpty()
+  reason!: string;
+}

@@ -5,7 +5,10 @@ import type {
   FlightAssessment,
   Location,
   Mission,
+  NoFlyZone,
+  NoFlyZoneInput,
   Overview,
+  AuthSession,
   PublicOrderInput,
   PublicOrderResult,
   QuoteResult,
@@ -18,6 +21,15 @@ import type {
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? '/api',
 })
+
+export function setAuthToken(token?: string) {
+  if (token) api.defaults.headers.common.Authorization = `Bearer ${token}`
+  else delete api.defaults.headers.common.Authorization
+}
+
+export async function login(email: string, password: string) {
+  return (await api.post<AuthSession>('/auth/login', { email, password })).data
+}
 
 export async function getOverview() {
   const response = await api.get<Overview>('/operations/overview')
@@ -84,6 +96,14 @@ export async function createDrone(payload: DroneInput) {
   return (await api.post<Drone>('/operations/drones', payload)).data
 }
 
+export async function createNoFlyZone(payload: NoFlyZoneInput) {
+  return (await api.post<NoFlyZone>('/operations/no-fly-zones', payload)).data
+}
+
+export async function deleteNoFlyZone(id: string) {
+  await api.delete(`/operations/no-fly-zones/${id}`)
+}
+
 export async function updateDrone(id: string, payload: Partial<Pick<Drone, 'model' | 'battery' | 'maxPayloadKg'>>) {
   return (await api.patch<Drone>(`/operations/drones/${id}`, payload)).data
 }
@@ -142,6 +162,16 @@ export async function deliverMission(id: string) {
 
 export async function simulateMissionStep(id: string) {
   return (await api.post<Mission>(`/operations/missions/${id}/simulate-step`)).data
+}
+
+export async function advanceTelemetry(id: string) {
+  return (
+    await api.post<{
+      mission: Mission
+      drone: Drone
+      telemetry: { progressPercent: number; location: Location; route: Location[] }
+    }>(`/operations/missions/${id}/telemetry-step`)
+  ).data
 }
 
 export async function confirmDelivery(id: string, code: string) {

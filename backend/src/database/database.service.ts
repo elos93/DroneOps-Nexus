@@ -11,6 +11,7 @@ import {
   demoCustomers,
   demoDrones,
   demoMissions,
+  demoNoFlyZones,
   demoStations,
 } from './demo-data';
 import {
@@ -18,6 +19,7 @@ import {
   CustomerSchema,
   DroneSchema,
   MissionSchema,
+  NoFlyZoneSchema,
   StationSchema,
 } from './operations.schemas';
 import {
@@ -25,6 +27,7 @@ import {
   CustomerRecord,
   DroneRecord,
   MissionRecord,
+  NoFlyZone,
   StationRecord,
 } from './operations.types';
 
@@ -37,6 +40,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   private stationModel?: Model<StationRecord>;
   private customerModel?: Model<CustomerRecord>;
   private auditModel?: Model<AuditEventRecord>;
+  private noFlyZoneModel?: Model<NoFlyZone>;
 
   constructor(private readonly config: ConfigService) {}
 
@@ -64,6 +68,10 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     this.auditModel = this.connection.model<AuditEventRecord>(
       'AuditEvent',
       AuditEventSchema,
+    );
+    this.noFlyZoneModel = this.connection.model<NoFlyZone>(
+      'NoFlyZone',
+      NoFlyZoneSchema,
     );
     await this.seedAtlasIfEmpty();
     this.logger.log('Connected to MongoDB Atlas.');
@@ -138,6 +146,15 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     return this.auditModel.find().sort({ timestamp: -1 }).lean().exec();
   }
 
+  async getNoFlyZones(): Promise<NoFlyZone[]> {
+    if (!this.noFlyZoneModel)
+      return demoNoFlyZones.filter((record) => record.isActive !== false);
+    return this.noFlyZoneModel
+      .find({ isActive: { $ne: false } })
+      .lean()
+      .exec();
+  }
+
   async saveDrone(record: DroneRecord) {
     return this.saveRecord(this.droneModel, demoDrones, record);
   }
@@ -158,6 +175,10 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     return this.saveRecord(this.auditModel, demoAuditEvents, record);
   }
 
+  async saveNoFlyZone(record: NoFlyZone) {
+    return this.saveRecord(this.noFlyZoneModel, demoNoFlyZones, record);
+  }
+
   async deactivateDrone(id: string) {
     return this.deactivateRecord(this.droneModel, demoDrones, id);
   }
@@ -174,25 +195,31 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     return this.deactivateRecord(this.customerModel, demoCustomers, id);
   }
 
+  async deactivateNoFlyZone(id: string) {
+    return this.deactivateRecord(this.noFlyZoneModel, demoNoFlyZones, id);
+  }
+
   getStorageMode() {
     return this.connection ? 'mongodb-atlas' : 'demo-memory';
   }
 
   private async seedAtlasIfEmpty() {
     if (!this.droneModel || !this.missionModel || !this.stationModel) return;
-    const [drones, missions, stations, customers, auditEvents] =
+    const [drones, missions, stations, customers, auditEvents, noFlyZones] =
       await Promise.all([
         this.droneModel.countDocuments(),
         this.missionModel.countDocuments(),
         this.stationModel.countDocuments(),
         this.customerModel?.countDocuments() ?? 0,
         this.auditModel?.countDocuments() ?? 0,
+        this.noFlyZoneModel?.countDocuments() ?? 0,
       ]);
     if (drones === 0) await this.droneModel.insertMany(demoDrones);
     if (missions === 0) await this.missionModel.insertMany(demoMissions);
     if (stations === 0) await this.stationModel.insertMany(demoStations);
     if (customers === 0) await this.customerModel?.insertMany(demoCustomers);
     if (auditEvents === 0) await this.auditModel?.insertMany(demoAuditEvents);
+    if (noFlyZones === 0) await this.noFlyZoneModel?.insertMany(demoNoFlyZones);
   }
 
   private async saveRecord<T extends { id: string }>(

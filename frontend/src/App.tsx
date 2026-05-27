@@ -21,11 +21,22 @@ import {
   Users,
   X,
 } from 'lucide-react'
-import { assessFlight, getOverview } from './api'
+import { assessFlight, getOverview, setAuthToken } from './api'
 import { AdvancedViews, type AdvancedView } from './AdvancedViews'
+import { AuthView } from './AuthView'
 import { ManagementViews, type View } from './ManagementViews'
 import { BookingPortal, LandingPage } from './PortalViews'
-import type { Drone, Mission, Role } from './types'
+import type { AuthSession, Drone, Mission } from './types'
+
+const storedSession = (() => {
+  try {
+    const value = localStorage.getItem('droneops-session')
+    return value ? (JSON.parse(value) as AuthSession) : undefined
+  } catch {
+    return undefined
+  }
+})()
+setAuthToken(storedSession?.accessToken)
 
 function App() {
   const { data, isLoading, isError, refetch } = useQuery({
@@ -39,7 +50,7 @@ function App() {
   const [lightMode, setLightMode] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [portalView, setPortalView] = useState<'landing' | 'control' | 'book'>('landing')
-  const [role, setRole] = useState<Role>('admin')
+  const [session, setSession] = useState<AuthSession | undefined>(storedSession)
   const flightGate = useMutation({
     mutationFn: ({ droneId, missionId }: { droneId: string; missionId: string }) =>
       assessFlight(droneId, missionId),
@@ -63,6 +74,18 @@ function App() {
   if (portalView === 'book') {
     return <BookingPortal onBack={() => setPortalView('landing')} onOpenControl={() => setPortalView('control')} />
   }
+  if (!session) {
+    return (
+      <AuthView
+        onBack={() => setPortalView('landing')}
+        onAuthenticated={(nextSession) => {
+          localStorage.setItem('droneops-session', JSON.stringify(nextSession))
+          setAuthToken(nextSession.accessToken)
+          setSession(nextSession)
+        }}
+      />
+    )
+  }
   if (isLoading) return <LoadingPanel />
   if (isError || !data) return <ErrorPanel onRetry={() => refetch()} />
 
@@ -76,6 +99,7 @@ function App() {
     setView(nextView)
     setMobileMenuOpen(false)
   }
+  const role = session.user.role
 
   return (
     <div className={`app-shell ${lightMode ? 'light-mode' : ''}`}>
@@ -100,12 +124,19 @@ function App() {
         </nav>
         <div className="sidebar-footer">
           <label className="role-switch">Role preview
-            <select value={role} onChange={(event) => { setRole(event.target.value as Role); changeView('dashboard') }}>
-              <option value="admin">Administrator</option>
-              <option value="dispatcher">Dispatcher</option>
-              <option value="customer">Customer</option>
+            <select value={role} disabled>
+              <option value={role}>{session.user.name} ({role})</option>
             </select>
           </label>
+          <button
+            onClick={() => {
+              localStorage.removeItem('droneops-session')
+              setAuthToken(undefined)
+              setSession(undefined)
+            }}
+          >
+            <Settings size={18} /> Sign Out
+          </button>
           <button onClick={() => setLightMode((enabled) => !enabled)}><Settings size={18} /> {lightMode ? 'Dark Mode' : 'Light Mode'}</button>
           <p>{data.storageMode === 'mongodb-atlas' ? 'MongoDB Atlas connected' : 'Demo mode - add Atlas URI'}</p>
         </div>
@@ -216,7 +247,7 @@ function App() {
         </section>
         </> : view === 'drones' || view === 'missions' || view === 'customers' || view === 'stations'
           ? <ManagementViews view={view} overview={data} onRefresh={refetch} />
-          : <AdvancedViews view={view} overview={data} onRefresh={refetch} />}
+          : <AdvancedViews view={view} overview={data} onRefresh={refetch} role={role} />}
       </main>
     </div>
   )
