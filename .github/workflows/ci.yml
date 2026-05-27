@@ -23,9 +23,11 @@ jobs:
       - name: Install workspace dependencies
         run: npm ci
       - name: Install API dependencies
-        run: npm ci --prefix backend
+        # The lock file is authored on Windows; npm resolves Linux-only optional
+        # native packages on the runner before validation.
+        run: npm install --prefix backend --no-audit --no-fund
       - name: Install web dependencies
-        run: npm ci --prefix frontend
+        run: npm install --prefix frontend --no-audit --no-fund
       - name: Lint
         run: npm run lint
       - name: Build
