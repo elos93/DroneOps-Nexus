@@ -15,6 +15,7 @@ import {
   RadioTower,
   Route,
   Settings,
+  ShoppingBag,
   Stethoscope,
   Sun,
   Users,
@@ -23,7 +24,8 @@ import {
 import { assessFlight, getOverview } from './api'
 import { AdvancedViews, type AdvancedView } from './AdvancedViews'
 import { ManagementViews, type View } from './ManagementViews'
-import type { Drone, Mission } from './types'
+import { BookingPortal, LandingPage } from './PortalViews'
+import type { Drone, Mission, Role } from './types'
 
 function App() {
   const { data, isLoading, isError, refetch } = useQuery({
@@ -36,6 +38,8 @@ function App() {
   const [view, setView] = useState<View | AdvancedView>('dashboard')
   const [lightMode, setLightMode] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [portalView, setPortalView] = useState<'landing' | 'control' | 'book'>('landing')
+  const [role, setRole] = useState<Role>('admin')
   const flightGate = useMutation({
     mutationFn: ({ droneId, missionId }: { droneId: string; missionId: string }) =>
       assessFlight(droneId, missionId),
@@ -53,6 +57,12 @@ function App() {
     [data],
   )
 
+  if (portalView === 'landing') {
+    return <LandingPage onOpenControl={() => setPortalView('control')} onBook={() => setPortalView('book')} />
+  }
+  if (portalView === 'book') {
+    return <BookingPortal onBack={() => setPortalView('landing')} onOpenControl={() => setPortalView('control')} />
+  }
   if (isLoading) return <LoadingPanel />
   if (isError || !data) return <ErrorPanel onRetry={() => refetch()} />
 
@@ -78,16 +88,24 @@ function App() {
         <div className="logo"><span className="logo-mark" /><div><strong>DroneOps</strong><small>NEXUS</small></div></div>
         <nav>
           <button className={view === 'dashboard' ? 'active' : ''} onClick={() => changeView('dashboard')}><Activity size={19} /> Dashboard</button>
-          <button className={view === 'drones' ? 'active' : ''} onClick={() => changeView('drones')}><MapPinned size={19} /> Drones</button>
-          <button className={view === 'missions' ? 'active' : ''} onClick={() => changeView('missions')}><Route size={19} /> Missions</button>
-          <button className={view === 'customers' ? 'active' : ''} onClick={() => changeView('customers')}><Users size={19} /> Customers</button>
-          <button className={view === 'stations' ? 'active' : ''} onClick={() => changeView('stations')}><RadioTower size={19} /> Stations</button>
+          <button onClick={() => setPortalView('book')}><ShoppingBag size={19} /> Book Delivery</button>
+          {role !== 'customer' && <button className={view === 'drones' ? 'active' : ''} onClick={() => changeView('drones')}><MapPinned size={19} /> Drones</button>}
+          {role !== 'customer' && <button className={view === 'missions' ? 'active' : ''} onClick={() => changeView('missions')}><Route size={19} /> Missions</button>}
+          {role === 'admin' && <button className={view === 'customers' ? 'active' : ''} onClick={() => changeView('customers')}><Users size={19} /> Customers</button>}
+          {role !== 'customer' && <button className={view === 'stations' ? 'active' : ''} onClick={() => changeView('stations')}><RadioTower size={19} /> Stations</button>}
           <button className={view === 'intelligence' ? 'active' : ''} onClick={() => changeView('intelligence')}><BrainCircuit size={19} /> Intelligence</button>
           <button className={view === 'tracking' ? 'active' : ''} onClick={() => changeView('tracking')}><MapPinned size={19} /> Tracking</button>
-          <button className={view === 'maintenance' ? 'active' : ''} onClick={() => changeView('maintenance')}><Stethoscope size={19} /> Maintenance</button>
-          <button className={view === 'audit' ? 'active' : ''} onClick={() => changeView('audit')}><ClipboardList size={19} /> Audit Log</button>
+          {role === 'admin' && <button className={view === 'maintenance' ? 'active' : ''} onClick={() => changeView('maintenance')}><Stethoscope size={19} /> Maintenance</button>}
+          {role === 'admin' && <button className={view === 'audit' ? 'active' : ''} onClick={() => changeView('audit')}><ClipboardList size={19} /> Audit Log</button>}
         </nav>
         <div className="sidebar-footer">
+          <label className="role-switch">Role preview
+            <select value={role} onChange={(event) => { setRole(event.target.value as Role); changeView('dashboard') }}>
+              <option value="admin">Administrator</option>
+              <option value="dispatcher">Dispatcher</option>
+              <option value="customer">Customer</option>
+            </select>
+          </label>
           <button onClick={() => setLightMode((enabled) => !enabled)}><Settings size={18} /> {lightMode ? 'Dark Mode' : 'Light Mode'}</button>
           <p>{data.storageMode === 'mongodb-atlas' ? 'MongoDB Atlas connected' : 'Demo mode - add Atlas URI'}</p>
         </div>
@@ -106,6 +124,7 @@ function App() {
             </button>
             <button className="icon-button" onClick={() => setLightMode((enabled) => !enabled)}>{lightMode ? <Moon size={18} /> : <Sun size={18} />}</button>
             <button className="primary" onClick={() => refetch()}>Refresh Live Data</button>
+            <button className="icon-button" aria-label="Return to landing page" onClick={() => setPortalView('landing')}><PlaneTakeoff size={18} /></button>
           </div>
         </header>
 

@@ -12,6 +12,7 @@ import {
   MissionRecord,
   MissionStatus,
   NoFlyZone,
+  QuoteResult,
 } from '../database/operations.types';
 import {
   AssignMissionDto,
@@ -20,7 +21,9 @@ import {
   CreateCustomerDto,
   CreateDroneDto,
   CreateMissionDto,
+  CreatePublicOrderDto,
   CreateStationDto,
+  QuoteOrderDto,
   ReleaseChargeDto,
   UpdateCustomerDto,
   UpdateDroneDto,
@@ -61,6 +64,7 @@ export class OperationsService {
         this.database.getCustomers(),
         this.database.getAuditEvents(),
       ]);
+    const alerts = this.buildAlerts(drones, missions, stations);
 
     return {
       storageMode: this.database.getStorageMode(),
@@ -79,7 +83,17 @@ export class OperationsService {
       missions: missions.map((mission) => this.publicMission(mission)),
       stations,
       customers,
-      alerts: this.buildAlerts(drones, missions, stations),
+      alerts,
+      notifications: alerts.map((alert) => ({
+        ...alert,
+        channel: alert.severity === 'critical' ? 'sms + email' : 'in-app',
+        deliveryState: 'demo-preview',
+      })),
+      roleCapabilities: {
+        admin: ['manage fleet', 'dispatch missions', 'view audit'],
+        dispatcher: ['dispatch missions', 'monitor weather', 'track fleet'],
+        customer: ['create delivery', 'receive quote', 'track shipment'],
+      },
       analytics: {
         deliveredMissions: missions.filter(
           (mission) => mission.status === 'delivered',
@@ -124,6 +138,104 @@ export class OperationsService {
 
   async getCustomers() {
     return this.database.getCustomers();
+  }
+
+  quoteOrder(dto: QuoteOrderDto): QuoteResult {
+    const route = this.planRoute(dto.origin, dto.destination);
+    const priorityFactor =
+      dto.priority === 'critical' ? 1.6 : dto.priority === 'urgent' ? 1.28 : 1;
+    const medicalFactor = dto.serviceType === 'medical' ? 1.45 : 1;
+    const coldChainCost = dto.temperatureControlled ? 22 : 0;
+    const priceIls = Math.round(
+      (18 + route.distanceKm * 8.5 + dto.payloadKg * 6 + coldChainCost) *
+        priorityFactor *
+        medicalFactor,
+    );
+    return {
+      distanceKm: route.distanceKm,
+      priceIls,
+      estimatedMinutes: Math.max(
+        6,
+        Math.ceil(
+          route.distanceKm * 3.3 + (dto.serviceType === 'medical' ? 2 : 4),
+        ),
+      ),
+      serviceType: dto.serviceType,
+      priority: dto.priority,
+      routeWaypoints: route.waypoints,
+      routeNotice: route.notice,
+    };
+  }
+
+  async createPublicOrder(dto: CreatePublicOrderDto) {
+    const suffix = `${Date.now()}`.slice(-7);
+    const senderId = `CU-S${suffix}`;
+    const targetId = `CU-R${suffix}`;
+    const missionId = `WEB-${suffix}`;
+    const quote = this.quoteOrder(dto);
+    await Promise.all([
+      this.database.saveCustomer({
+        id: senderId,
+        name: dto.senderName,
+        phone: dto.senderPhone,
+        email: dto.senderEmail,
+        location: dto.origin,
+        isActive: true,
+      }),
+      this.database.saveCustomer({
+        id: targetId,
+        name: dto.recipientName,
+        phone: dto.recipientPhone,
+        email: dto.recipientEmail,
+        location: dto.destination,
+        isActive: true,
+      }),
+    ]);
+    const mission = await this.database.saveMission({
+      id: missionId,
+      senderCustomerId: senderId,
+      targetCustomerId: targetId,
+      customer: dto.senderName,
+      origin: dto.origin,
+      destination: dto.destination,
+      payloadKg: dto.payloadKg,
+      priority: dto.priority,
+      serviceType: dto.serviceType,
+      temperatureControlled: dto.temperatureControlled ?? false,
+      priceIls: quote.priceIls,
+      routeDistanceKm: quote.distanceKm,
+      routeWaypoints: quote.routeWaypoints,
+      routeNotice: quote.routeNotice,
+      status: 'pending',
+      etaMinutes: quote.estimatedMinutes,
+      progressPercent: 0,
+      trackingCode: `TRACK-${missionId}`,
+      proofOfDeliveryCode: `${Math.floor(1000 + Math.random() * 9000)}`,
+      timeline: [
+        this.timelineEvent(
+          'pending',
+          dto.serviceType === 'medical'
+            ? 'Medical delivery requested'
+            : 'Online delivery ordered',
+          `${quote.routeNotice} Estimated price: ILS ${quote.priceIls}.`,
+        ),
+      ],
+      isActive: true,
+    });
+    await this.audit(
+      'PUBLIC_ORDER_CREATED',
+      'mission',
+      missionId,
+      `${dto.serviceType} order submitted through customer portal.`,
+    );
+    return {
+      mission: this.publicMission(mission),
+      quote,
+      notificationPreview: [
+        `Confirmation email queued for ${dto.senderEmail}.`,
+        `Tracking message queued for ${dto.recipientPhone}.`,
+      ],
+    };
   }
 
   async getTracking(id: string) {
@@ -184,15 +296,22 @@ export class OperationsService {
 
   async assertRouteClear(missionId: string) {
     const mission = await this.findMission(missionId);
-    const zone = noFlyZones.find(
+    const destinationZone = noFlyZones.find(
       (item) =>
         this.distanceKm(item.center, mission.destination) <= item.radiusKm,
     );
-    if (zone) {
+    if (destinationZone) {
       throw new BadRequestException(
-        `Route blocked by ${zone.name}. ${zone.reason}`,
+        `Destination is inside ${destinationZone.name}. ${destinationZone.reason}`,
       );
     }
+    const route = this.planRoute(mission.origin, mission.destination);
+    await this.database.saveMission({
+      ...mission,
+      routeDistanceKm: route.distanceKm,
+      routeWaypoints: route.waypoints,
+      routeNotice: route.notice,
+    });
   }
 
   async findDrone(id: string) {
@@ -373,11 +492,25 @@ export class OperationsService {
       this.findCustomer(dto.senderCustomerId),
       this.findCustomer(dto.targetCustomerId),
     ]);
+    const quote = this.quoteOrder({
+      origin: sender.location,
+      destination: target.location,
+      payloadKg: dto.payloadKg,
+      priority: dto.priority,
+      serviceType: dto.serviceType ?? 'standard',
+      temperatureControlled: dto.temperatureControlled,
+    });
     const mission = await this.database.saveMission({
       ...dto,
       customer: sender.name,
       origin: sender.location,
       destination: target.location,
+      serviceType: dto.serviceType ?? 'standard',
+      temperatureControlled: dto.temperatureControlled ?? false,
+      priceIls: quote.priceIls,
+      routeDistanceKm: quote.distanceKm,
+      routeWaypoints: quote.routeWaypoints,
+      routeNotice: quote.routeNotice,
       status: 'pending',
       progressPercent: 0,
       trackingCode: `TRACK-${dto.id.replace(/[^A-Za-z0-9]/g, '')}`,
@@ -386,7 +519,7 @@ export class OperationsService {
         this.timelineEvent(
           'pending',
           'Mission created',
-          'Delivery request entered operations queue.',
+          `${quote.routeNotice} Estimated price: ILS ${quote.priceIls}.`,
         ),
       ],
       isActive: true,
@@ -766,6 +899,41 @@ export class OperationsService {
         Math.cos((second.latitude * Math.PI) / 180) *
         Math.sin(longitude / 2) ** 2;
     return 6371 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
+  }
+
+  private planRoute(origin: Location, destination: Location) {
+    const directDistance = this.distanceKm(origin, destination);
+    const midpoint = {
+      latitude: (origin.latitude + destination.latitude) / 2,
+      longitude: (origin.longitude + destination.longitude) / 2,
+      label: 'Direct route midpoint',
+    };
+    const intersectedZone = noFlyZones.find(
+      (zone) => this.distanceKm(zone.center, midpoint) <= zone.radiusKm + 0.55,
+    );
+    if (!intersectedZone) {
+      return {
+        distanceKm: Math.round(directDistance * 10) / 10,
+        waypoints: [] as Location[],
+        notice: 'Direct route cleared.',
+      };
+    }
+    const waypoint: Location = {
+      latitude: intersectedZone.center.latitude + intersectedZone.radiusKm / 92,
+      longitude:
+        intersectedZone.center.longitude + intersectedZone.radiusKm / 76,
+      label: `Bypass ${intersectedZone.name}`,
+    };
+    return {
+      distanceKm:
+        Math.round(
+          (this.distanceKm(origin, waypoint) +
+            this.distanceKm(waypoint, destination)) *
+            10,
+        ) / 10,
+      waypoints: [waypoint],
+      notice: `Rerouted around ${intersectedZone.name}.`,
+    };
   }
 
   private publicMission(mission: MissionRecord) {

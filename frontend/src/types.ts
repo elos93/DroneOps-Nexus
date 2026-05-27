@@ -1,5 +1,7 @@
 export type DroneStatus = 'available' | 'charging' | 'mission'
 export type MissionStatus = 'pending' | 'assigned' | 'in-transit' | 'delivered'
+export type ServiceType = 'standard' | 'medical'
+export type Role = 'admin' | 'dispatcher' | 'customer'
 
 export interface Location {
   latitude: number
@@ -39,6 +41,12 @@ export interface Mission {
   destination: Location
   payloadKg: number
   priority: 'standard' | 'urgent' | 'critical'
+  serviceType?: ServiceType
+  temperatureControlled?: boolean
+  priceIls?: number
+  routeDistanceKm?: number
+  routeWaypoints?: Location[]
+  routeNotice?: string
   status: MissionStatus
   droneId?: string
   etaMinutes: number
@@ -81,6 +89,8 @@ export interface Overview {
   stations: Station[]
   customers: Customer[]
   alerts: Alert[]
+  notifications: NotificationPreview[]
+  roleCapabilities: Record<Role, string[]>
   analytics: {
     deliveredMissions: number
     fleetUtilizationPercent: number
@@ -97,6 +107,11 @@ export interface Alert {
   title: string
   message: string
   entityId: string
+}
+
+export interface NotificationPreview extends Alert {
+  channel: string
+  deliveryState: string
 }
 
 export interface NoFlyZone {
@@ -147,4 +162,52 @@ export interface FlightAssessment {
   batteryRequired: number
   availableBattery: number
   energyMultiplier: number
+}
+
+export interface QuoteResult {
+  distanceKm: number
+  priceIls: number
+  estimatedMinutes: number
+  serviceType: ServiceType
+  priority: Mission['priority']
+  routeWaypoints: Location[]
+  routeNotice: string
+}
+
+export interface PublicOrderInput {
+  origin: Location
+  destination: Location
+  payloadKg: number
+  priority: Mission['priority']
+  serviceType: ServiceType
+  temperatureControlled?: boolean
+  senderName: string
+  senderEmail: string
+  senderPhone: string
+  recipientName: string
+  recipientEmail: string
+  recipientPhone: string
+}
+
+export interface PublicOrderResult {
+  mission: Mission
+  quote: QuoteResult
+  notificationPreview: string[]
+}
+
+export interface ForecastResult {
+  missionId: string
+  destination: string
+  slots: Array<{
+    time: string
+    speedKmh: number
+    gustKmh: number
+    recommendation: string
+  }>
+  bestWindow?: {
+    time: string
+    speedKmh: number
+    gustKmh: number
+    recommendation: string
+  }
 }

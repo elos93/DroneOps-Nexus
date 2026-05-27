@@ -8,6 +8,7 @@ export type DroneStatus = 'available' | 'charging' | 'mission';
 export type MissionStatus = 'pending' | 'assigned' | 'in-transit' | 'delivered';
 export type MissionPriority = 'standard' | 'urgent' | 'critical';
 export type AlertSeverity = 'info' | 'warning' | 'critical';
+export type ServiceType = 'standard' | 'medical';
 
 export interface MissionEvent {
   status: MissionStatus;
@@ -59,6 +60,12 @@ export interface MissionRecord {
   destination: Location;
   payloadKg: number;
   priority: MissionPriority;
+  serviceType?: ServiceType;
+  temperatureControlled?: boolean;
+  priceIls?: number;
+  routeDistanceKm?: number;
+  routeWaypoints?: Location[];
+  routeNotice?: string;
   status: MissionStatus;
   droneId?: string;
   etaMinutes: number;
@@ -93,4 +100,14 @@ export interface NoFlyZone {
   center: Location;
   radiusKm: number;
   reason: string;
+}
+
+export interface QuoteResult {
+  distanceKm: number;
+  priceIls: number;
+  estimatedMinutes: number;
+  serviceType: ServiceType;
+  priority: MissionPriority;
+  routeWaypoints: Location[];
+  routeNotice: string;
 }

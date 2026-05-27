@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            frontend/package-lock.json
+      - name: Install workspace dependencies
+        run: npm ci
+      - name: Install API dependencies
+        run: npm ci --prefix backend
+      - name: Install web dependencies
+        run: npm ci --prefix frontend
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
+      - name: Unit tests
+        run: npm run test --prefix backend -- --runInBand
+      - name: API integration tests
+        run: npm run test:e2e --prefix backend -- --runInBand

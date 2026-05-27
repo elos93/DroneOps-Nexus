@@ -21,16 +21,21 @@ The system is designed for an operations team managing last-mile drone deliverie
 
 ### Delivery Management
 
+- Public customer booking portal with instant distance, ETA and price estimates.
+- Medical-priority and temperature-controlled delivery requests.
 - Create and manage delivery missions.
 - Assign, collect and deliver packages.
 - Weather-approved dispatch based on wind, gusts, payload and battery reserve.
 - Emergency Return Home command for active drones.
+- Route planning with bypass waypoints when a corridor intersects restricted airspace.
 
 ### Mission Intelligence
 
 - Smart drone recommendations ranked by readiness, location and battery health.
 - Operational alerts for low battery, maintenance and restricted routes.
 - Utilization and charging-capacity indicators.
+- Six-hour Open-Meteo forecast windows for dispatch scheduling.
+- Notification channel routing preview for critical operational events.
 
 ### Customer Tracking
 
@@ -52,6 +57,8 @@ The system is designed for an operations team managing last-mile drone deliverie
 - Audit log of operational activity.
 - Safe public API responses that do not expose delivery confirmation codes.
 - Light and dark display themes.
+- Admin, dispatcher and customer role-preview navigation flows.
+- GitHub Actions validation for linting, builds and automated tests.
 
 ## Technology Stack
 
@@ -89,4 +96,5 @@ NestJS Operations API (Vercel Serverless)
 - Configure MongoDB Atlas credentials for persistent cloud data.
 - Add authentication and role-based authorization for administrator, dispatcher and customer users.
 - Connect a real SMS or email provider for delivery confirmation codes.
+- Replace demo notification previews with a provider-backed delivery and retry queue.
 - Add a custom domain and monitoring for a production release.

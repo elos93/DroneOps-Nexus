@@ -14,6 +14,7 @@ import {
   completeDroneService,
   confirmDelivery,
   getRecommendations,
+  getForecast,
   getTracking,
   simulateMissionStep,
 } from './api'
@@ -40,6 +41,11 @@ function IntelligenceView({ overview }: Pick<Props, 'overview'>) {
   const recommendations = useQuery({
     queryKey: ['recommendations', missionId],
     queryFn: () => getRecommendations(missionId),
+    enabled: Boolean(missionId),
+  })
+  const forecast = useQuery({
+    queryKey: ['forecast', missionId],
+    queryFn: () => getForecast(missionId),
     enabled: Boolean(missionId),
   })
 
@@ -94,6 +100,30 @@ function IntelligenceView({ overview }: Pick<Props, 'overview'>) {
           ))}
         </div>
       </article>
+      <div className="advanced-grid">
+        <article className="panel">
+          <h3 className="section-heading"><MapPinned size={17} /> Weather Scheduling</h3>
+          {forecast.data?.bestWindow && (
+            <div className="best-window">
+              <strong>Best departure: {new Date(forecast.data.bestWindow.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong>
+              <p>{forecast.data.bestWindow.speedKmh} km/h wind, {forecast.data.bestWindow.gustKmh} km/h gusts</p>
+            </div>
+          )}
+          <div className="forecast-list">
+            {forecast.data?.slots.map((slot) => (
+              <div key={slot.time}><time>{new Date(slot.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time><span>{slot.speedKmh}/{slot.gustKmh} km/h</span><b className={slot.recommendation.toLowerCase()}>{slot.recommendation}</b></div>
+            ))}
+          </div>
+        </article>
+        <article className="panel">
+          <h3 className="section-heading"><ShieldAlert size={17} /> Notification Routing</h3>
+          <div className="notification-list">
+            {overview.notifications.map((notice) => (
+              <div key={notice.id}><strong>{notice.title}</strong><span>{notice.channel}</span><small>{notice.deliveryState}</small></div>
+            ))}
+          </div>
+        </article>
+      </div>
     </section>
   )
 }
@@ -129,6 +159,8 @@ function TrackingView({ overview, onRefresh }: Pick<Props, 'overview' | 'onRefre
           <article className="panel delivery-card">
             <div className="delivery-code">{result.publicCode}</div>
             <h2>{result.mission.origin.label} to {result.mission.destination.label}</h2>
+            {result.mission.serviceType === 'medical' && <p className="medical-badge">Medical cold-chain delivery</p>}
+            {result.mission.priceIls && <p>Quoted price: ILS {result.mission.priceIls} | {result.mission.routeNotice}</p>}
             <p>{result.mission.status === 'delivered' ? 'Delivered successfully' : `ETA ${result.estimatedArrivalMinutes} minutes`}</p>
             <div className="progress"><span style={{ width: `${result.mission.progressPercent}%` }} /></div>
             <strong>{result.mission.progressPercent}% complete</strong>

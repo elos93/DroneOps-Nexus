@@ -6,9 +6,13 @@ import type {
   Location,
   Mission,
   Overview,
+  PublicOrderInput,
+  PublicOrderResult,
+  QuoteResult,
   Recommendation,
   Station,
   TrackingResult,
+  ForecastResult,
 } from './types'
 
 const api = axios.create({
@@ -18,6 +22,14 @@ const api = axios.create({
 export async function getOverview() {
   const response = await api.get<Overview>('/operations/overview')
   return response.data
+}
+
+export async function quoteOrder(payload: PublicOrderInput) {
+  return (await api.post<QuoteResult>('/operations/public/quote', payload)).data
+}
+
+export async function createPublicOrder(payload: PublicOrderInput) {
+  return (await api.post<PublicOrderResult>('/operations/public/orders', payload)).data
 }
 
 export async function assessFlight(droneId: string, missionId: string) {
@@ -150,4 +162,8 @@ export async function getRecommendations(missionId: string) {
 
 export async function getTracking(id: string) {
   return (await api.get<TrackingResult>(`/operations/tracking/${id}`)).data
+}
+
+export async function getForecast(missionId: string) {
+  return (await api.get<ForecastResult>(`/weather/forecast/${missionId}`)).data
 }

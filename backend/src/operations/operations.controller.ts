@@ -15,7 +15,9 @@ import {
   CreateCustomerDto,
   CreateDroneDto,
   CreateMissionDto,
+  CreatePublicOrderDto,
   CreateStationDto,
+  QuoteOrderDto,
   ReleaseChargeDto,
   UpdateCustomerDto,
   UpdateDroneDto,
@@ -29,6 +31,16 @@ export class OperationsController {
   @Get('overview')
   getOverview() {
     return this.operations.getOverview();
+  }
+
+  @Post('public/quote')
+  quoteOrder(@Body() dto: QuoteOrderDto) {
+    return this.operations.quoteOrder(dto);
+  }
+
+  @Post('public/orders')
+  createPublicOrder(@Body() dto: CreatePublicOrderDto) {
+    return this.operations.createPublicOrder(dto);
   }
 
   @Get('drones')

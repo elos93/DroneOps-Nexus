@@ -56,6 +56,17 @@ export const MissionSchema = new Schema(
       required: true,
       enum: ['standard', 'urgent', 'critical'],
     },
+    serviceType: {
+      type: String,
+      required: true,
+      enum: ['standard', 'medical'],
+      default: 'standard',
+    },
+    temperatureControlled: { type: Boolean, default: false },
+    priceIls: { type: Number },
+    routeDistanceKm: { type: Number },
+    routeWaypoints: { type: [LocationSchema], default: [] },
+    routeNotice: { type: String },
     status: {
       type: String,
       required: true,

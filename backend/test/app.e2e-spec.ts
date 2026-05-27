@@ -30,6 +30,57 @@ describe('AppController (e2e)', () => {
       });
   });
 
+  it('quotes and accepts an online medical delivery request', async () => {
+    const order = {
+      origin: { latitude: 32.07, longitude: 34.78, label: 'Blood Bank' },
+      destination: {
+        latitude: 32.091,
+        longitude: 34.812,
+        label: 'North Clinic',
+      },
+      payloadKg: 1.3,
+      priority: 'critical',
+      serviceType: 'medical',
+      temperatureControlled: true,
+      senderName: 'Emergency Lab',
+      senderEmail: 'lab@example.com',
+      senderPhone: '050-1111111',
+      recipientName: 'ER Desk',
+      recipientEmail: 'er@example.com',
+      recipientPhone: '050-2222222',
+    };
+
+    await request(app.getHttpServer())
+      .post('/api/operations/public/quote')
+      .send(order)
+      .expect(201)
+      .expect(
+        ({ body }: { body: { priceIls: number; serviceType: string } }) => {
+          expect(body.priceIls).toBeGreaterThan(0);
+          expect(body.serviceType).toBe('medical');
+        },
+      );
+
+    await request(app.getHttpServer())
+      .post('/api/operations/public/orders')
+      .send(order)
+      .expect(201)
+      .expect(
+        ({
+          body,
+        }: {
+          body: {
+            mission: { trackingCode: string; serviceType: string };
+            notificationPreview: string[];
+          };
+        }) => {
+          expect(body.mission.trackingCode).toContain('TRACK-WEB-');
+          expect(body.mission.serviceType).toBe('medical');
+          expect(body.notificationPreview).toHaveLength(2);
+        },
+      );
+  });
+
   it('runs the WPF-style delivery and charging workflow', async () => {
     const sender = {
       id: 'CU-900',
@@ -224,12 +275,19 @@ describe('AppController (e2e)', () => {
         ({
           body,
         }: {
-          body: { customers: Array<{ id: string }>; auditEvents: unknown[] };
+          body: {
+            customers: Array<{ id: string }>;
+            auditEvents: unknown[];
+            notifications: unknown[];
+            roleCapabilities: { admin: string[] };
+          };
         }) => {
           expect(
             body.customers.some((customer) => customer.id === sender.id),
           ).toBe(true);
           expect(body.auditEvents.length).toBeGreaterThan(0);
+          expect(body.notifications.length).toBeGreaterThan(0);
+          expect(body.roleCapabilities.admin).toContain('manage fleet');
         },
       );
   });

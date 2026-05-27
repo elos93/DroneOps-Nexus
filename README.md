@@ -4,6 +4,7 @@ A modern full-stack drone operations platform rebuilt with TypeScript, React, Ne
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-000000?logo=vercel)](https://droneops-nexus.vercel.app)
 [![API Status](https://img.shields.io/badge/API-Online-16a34a)](https://droneops-nexus-api.vercel.app/api/health)
+[![CI](https://github.com/elos93/DroneOps-Nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/elos93/DroneOps-Nexus/actions/workflows/ci.yml)
 
 ## Live Demo
 
@@ -23,8 +24,11 @@ The hosted demo currently runs with seeded in-memory operations data. MongoDB At
 ## Features Implemented
 
 - Modern command dashboard with fleet metrics, mission queue and battery analytics.
+- Public product landing page and customer booking portal with instant route pricing.
+- Medical priority delivery mode with temperature-controlled shipment indication.
 - Live map view for drones and charging stations.
 - Weather Flight Gate that evaluates wind, gusts, payload and battery reserve.
+- Six-hour weather scheduling forecast for selecting a safer departure window.
 - `GO`, `CAUTION` and `HOLD` takeoff decisions.
 - Full fleet management: add, update, remove, charge and release drones.
 - Customer and charging-station management screens.
@@ -34,7 +38,11 @@ The hosted demo currently runs with seeded in-memory operations data. MongoDB At
 - Customer Tracking Portal with shipment progress, timeline, printable mission report and proof-of-delivery flow.
 - Fleet Maintenance center with battery-health monitoring, flight-hours and preventive service actions.
 - Restricted no-fly zones displayed on the map and enforced during dispatch.
+- Smart route calculation with bypass waypoint planning around restricted corridors.
 - Operational audit log, light/dark themes and guided live demo progression.
+- Role-preview experience for administrator, dispatcher and customer product flows.
+- Notification routing preview for in-app, SMS and email escalation channels.
+- GitHub Actions quality gate for lint, builds, unit tests and API integration tests.
 - Emergency Return Home command that recalls an active drone and safely requeues its mission.
 - Demo-mode seed data so development works before Atlas credentials are supplied.
 - MongoDB Atlas bootstrap: when `MONGODB_URI` is configured, empty collections are seeded automatically.
@@ -93,13 +101,15 @@ Never commit real MongoDB credentials to Git.
 The application is fully demonstrable without cloud credentials. For a production deployment:
 
 - Configure `MONGODB_URI` to persist fleet, timeline and audit information in Atlas.
-- Add a real authentication provider and server-side roles before exposing write operations publicly.
-- Connect an SMS or email provider for delivery OTP delivery. In demo-memory mode only, the tracking screen displays its demo code.
+- Connect a real authentication provider and server-side authorization. The current role selector is a product-flow preview, not a security boundary.
+- Connect an SMS or email provider for actual notification delivery. Current channel routing is a demonstration preview, and in demo-memory mode only the tracking screen displays its demo code.
 
 ## API
 
 - `GET /api/health`
 - `GET /api/operations/overview`
+- `POST /api/operations/public/quote`
+- `POST /api/operations/public/orders`
 - `GET /api/operations/drones`
 - `GET /api/operations/missions`
 - `GET /api/operations/customers`
@@ -120,6 +130,7 @@ The application is fully demonstrable without cloud credentials. For a productio
 - `POST /api/operations/drones/:id/emergency-return`
 - `POST /api/weather/flight-gate`
 - `POST /api/weather/dispatch`
+- `GET /api/weather/forecast/:missionId`
 
 Example assessment request:
 

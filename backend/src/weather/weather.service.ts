@@ -4,7 +4,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { FlightGateDto } from './dto/flight-gate.dto';
-import { evaluateFlight, WindConditions } from './wind-policy';
+import { evaluateFlight, WindConditions, windLimits } from './wind-policy';
 import { OperationsService } from '../operations/operations.service';
 
 @Injectable()
@@ -33,6 +33,64 @@ export class WeatherService {
       droneId: dto.droneId,
     });
     return { assessment, mission };
+  }
+
+  async forecastMission(missionId: string) {
+    const mission = await this.operations.findMission(missionId);
+    const query = new URLSearchParams({
+      latitude: mission.destination.latitude.toString(),
+      longitude: mission.destination.longitude.toString(),
+      hourly: 'wind_speed_10m,wind_gusts_10m',
+      forecast_hours: '6',
+      wind_speed_unit: 'kmh',
+      timezone: 'auto',
+    });
+    try {
+      const response = await fetch(
+        `https://api.open-meteo.com/v1/forecast?${query}`,
+      );
+      if (!response.ok)
+        throw new Error(`Weather API returned HTTP ${response.status}`);
+      const data = (await response.json()) as {
+        hourly: {
+          time: string[];
+          wind_speed_10m: number[];
+          wind_gusts_10m: number[];
+        };
+      };
+      const slots = data.hourly.time.slice(0, 6).map((time, index) => {
+        const speedKmh = data.hourly.wind_speed_10m[index];
+        const gustKmh = data.hourly.wind_gusts_10m[index];
+        const safe =
+          speedKmh < windLimits.maximumSpeedKmh &&
+          gustKmh < windLimits.maximumGustKmh;
+        return {
+          time,
+          speedKmh,
+          gustKmh,
+          recommendation: safe ? 'Recommended' : 'Hold',
+        };
+      });
+      const bestWindow =
+        slots
+          .filter((slot) => slot.recommendation === 'Recommended')
+          .sort(
+            (first, second) =>
+              first.speedKmh +
+              first.gustKmh -
+              (second.speedKmh + second.gustKmh),
+          )[0] ?? slots[0];
+      return {
+        missionId,
+        destination: mission.destination.label,
+        slots,
+        bestWindow,
+      };
+    } catch {
+      throw new ServiceUnavailableException(
+        'Wind forecast data is currently unavailable.',
+      );
+    }
   }
 
   private async getWind(

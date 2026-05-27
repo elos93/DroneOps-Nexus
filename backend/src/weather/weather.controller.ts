@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { FlightGateDto } from './dto/flight-gate.dto';
 import { WeatherService } from './weather.service';
 
@@ -14,5 +14,10 @@ export class WeatherController {
   @Post('dispatch')
   dispatch(@Body() dto: FlightGateDto) {
     return this.weather.dispatchFlight(dto);
+  }
+
+  @Get('forecast/:missionId')
+  forecast(@Param('missionId') missionId: string) {
+    return this.weather.forecastMission(missionId);
   }
 }
