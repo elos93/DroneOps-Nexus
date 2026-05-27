@@ -38,6 +38,7 @@ button { border: 0; cursor: pointer; }
 .sidebar a.active, .sidebar button.active { color: var(--cyan); background: rgba(34,211,238,.11); }
 .sidebar-footer { margin-top: auto; }
 .sidebar-footer p { margin: 22px 10px 0; padding: 13px; color: var(--muted); background: #0e1c30; border: 1px solid var(--border); border-radius: 11px; font-size: 11px; line-height: 1.55; }
+.mobile-menu-button, .mobile-close, .menu-backdrop { display: none; }
 .dashboard { min-width: 0; padding: 33px 38px 38px; }
 .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; }
 .eyebrow { margin: 0 0 7px; color: var(--cyan); font-size: 11px; letter-spacing: .2em; font-weight: 700; text-transform: uppercase; }
@@ -208,12 +209,23 @@ h1 { margin: 0 0 7px; font-size: 32px; letter-spacing: -.055em; }
 }
 @media (max-width: 720px) {
   .app-shell { display: block; }
-  .sidebar { display: none; }
-  .dashboard { padding: 22px 15px; }
+  .sidebar { display: flex; position: fixed; left: 0; top: 0; z-index: 30; width: min(290px, 84vw); height: 100dvh; padding: 24px 17px; transform: translateX(-105%); transition: transform .24s ease; box-shadow: 20px 0 42px rgba(0,0,0,.3); }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar .logo { margin-bottom: 34px; padding-right: 34px; }
+  .sidebar-footer { display: block; }
+  .sidebar nav button { justify-content: flex-start; padding: 0 14px; font-size: 14px; }
+  .mobile-menu-button { position: fixed; z-index: 20; left: 15px; top: 16px; width: 45px; height: 45px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 12px; color: var(--cyan); background: var(--panel); box-shadow: 0 8px 28px rgba(0,0,0,.2); }
+  .mobile-close { position: absolute; right: 14px; top: 16px; width: 38px; height: 38px; display: grid; place-items: center; border-radius: 10px; color: var(--muted); background: rgba(255,255,255,.04); }
+  .menu-backdrop { position: fixed; z-index: 25; inset: 0; display: block; background: rgba(3,8,20,.68); backdrop-filter: blur(2px); }
+  .dashboard { padding: 76px 15px 22px; }
   .header, .metrics { grid-template-columns: 1fr 1fr; }
   .header { display: block; }
   .header-actions { margin-top: 20px; }
   .metrics { display: grid; }
+  h1 { font-size: 28px; }
+  .primary { padding: 0 12px; font-size: 13px; }
+  .map-panel { height: 390px; }
+  .map { height: 307px; }
   .mission-row { grid-template-columns: 1fr 1fr; }
   .form-grid { display: grid; grid-template-columns: 1fr; }
   .dispatch-control { flex-wrap: wrap; }

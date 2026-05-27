@@ -9,6 +9,7 @@ import {
   BrainCircuit,
   ClipboardList,
   MapPinned,
+  Menu,
   Moon,
   PlaneTakeoff,
   RadioTower,
@@ -17,6 +18,7 @@ import {
   Stethoscope,
   Sun,
   Users,
+  X,
 } from 'lucide-react'
 import { assessFlight, getOverview } from './api'
 import { AdvancedViews, type AdvancedView } from './AdvancedViews'
@@ -33,6 +35,7 @@ function App() {
   const [selectedDroneId, setSelectedDroneId] = useState<string>()
   const [view, setView] = useState<View | AdvancedView>('dashboard')
   const [lightMode, setLightMode] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const flightGate = useMutation({
     mutationFn: ({ droneId, missionId }: { droneId: string; missionId: string }) =>
       assessFlight(droneId, missionId),
@@ -59,20 +62,30 @@ function App() {
     }
   }
 
+  const changeView = (nextView: View | AdvancedView) => {
+    setView(nextView)
+    setMobileMenuOpen(false)
+  }
+
   return (
     <div className={`app-shell ${lightMode ? 'light-mode' : ''}`}>
-      <aside className="sidebar">
+      {mobileMenuOpen && <button className="menu-backdrop" aria-label="Close navigation" onClick={() => setMobileMenuOpen(false)} />}
+      <button className="mobile-menu-button" aria-label="Open navigation" onClick={() => setMobileMenuOpen(true)}>
+        <Menu size={21} />
+      </button>
+      <aside className={`sidebar ${mobileMenuOpen ? 'open' : ''}`}>
+        <button className="mobile-close" aria-label="Close navigation" onClick={() => setMobileMenuOpen(false)}><X size={20} /></button>
         <div className="logo"><span className="logo-mark" /><div><strong>DroneOps</strong><small>NEXUS</small></div></div>
         <nav>
-          <button className={view === 'dashboard' ? 'active' : ''} onClick={() => setView('dashboard')}><Activity size={19} /> Dashboard</button>
-          <button className={view === 'drones' ? 'active' : ''} onClick={() => setView('drones')}><MapPinned size={19} /> Drones</button>
-          <button className={view === 'missions' ? 'active' : ''} onClick={() => setView('missions')}><Route size={19} /> Missions</button>
-          <button className={view === 'customers' ? 'active' : ''} onClick={() => setView('customers')}><Users size={19} /> Customers</button>
-          <button className={view === 'stations' ? 'active' : ''} onClick={() => setView('stations')}><RadioTower size={19} /> Stations</button>
-          <button className={view === 'intelligence' ? 'active' : ''} onClick={() => setView('intelligence')}><BrainCircuit size={19} /> Intelligence</button>
-          <button className={view === 'tracking' ? 'active' : ''} onClick={() => setView('tracking')}><MapPinned size={19} /> Tracking</button>
-          <button className={view === 'maintenance' ? 'active' : ''} onClick={() => setView('maintenance')}><Stethoscope size={19} /> Maintenance</button>
-          <button className={view === 'audit' ? 'active' : ''} onClick={() => setView('audit')}><ClipboardList size={19} /> Audit Log</button>
+          <button className={view === 'dashboard' ? 'active' : ''} onClick={() => changeView('dashboard')}><Activity size={19} /> Dashboard</button>
+          <button className={view === 'drones' ? 'active' : ''} onClick={() => changeView('drones')}><MapPinned size={19} /> Drones</button>
+          <button className={view === 'missions' ? 'active' : ''} onClick={() => changeView('missions')}><Route size={19} /> Missions</button>
+          <button className={view === 'customers' ? 'active' : ''} onClick={() => changeView('customers')}><Users size={19} /> Customers</button>
+          <button className={view === 'stations' ? 'active' : ''} onClick={() => changeView('stations')}><RadioTower size={19} /> Stations</button>
+          <button className={view === 'intelligence' ? 'active' : ''} onClick={() => changeView('intelligence')}><BrainCircuit size={19} /> Intelligence</button>
+          <button className={view === 'tracking' ? 'active' : ''} onClick={() => changeView('tracking')}><MapPinned size={19} /> Tracking</button>
+          <button className={view === 'maintenance' ? 'active' : ''} onClick={() => changeView('maintenance')}><Stethoscope size={19} /> Maintenance</button>
+          <button className={view === 'audit' ? 'active' : ''} onClick={() => changeView('audit')}><ClipboardList size={19} /> Audit Log</button>
         </nav>
         <div className="sidebar-footer">
           <button onClick={() => setLightMode((enabled) => !enabled)}><Settings size={18} /> {lightMode ? 'Dark Mode' : 'Light Mode'}</button>
@@ -88,7 +101,7 @@ function App() {
             <p className="subtitle">Live missions, weather-aware dispatch and complete operations management</p>
           </div>
           <div className="header-actions">
-            <button className="icon-button alert-button" onClick={() => setView('intelligence')}>
+            <button className="icon-button alert-button" onClick={() => changeView('intelligence')}>
               <Bell size={18} /><span>{data.alerts.length}</span>
             </button>
             <button className="icon-button" onClick={() => setLightMode((enabled) => !enabled)}>{lightMode ? <Moon size={18} /> : <Sun size={18} />}</button>
