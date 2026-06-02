@@ -1,5 +1,5 @@
 import { type ButtonHTMLAttributes, type FormEvent, type ReactNode, useState } from 'react'
-import { BatteryCharging, PackageCheck, PlaneTakeoff, Plus, Trash2, Truck } from 'lucide-react'
+import { BatteryCharging, MapPinned, PackageCheck, PlaneTakeoff, Plus, RadioTower, Trash2, Truck, Users } from 'lucide-react'
 import {
   chargeDrone,
   createCustomer,
@@ -87,6 +87,11 @@ function DronesView({ overview, busy, run }: ViewProps) {
   return (
     <>
       <ManagementHeader title={t('management.fleetTitle')} text={t('management.fleetText')} />
+      <ManagementSummary>
+        <SummaryCard icon={<PlaneTakeoff />} label={t('metrics.totalDrones')} value={overview.drones.length} text={t('metrics.registeredFleet')} />
+        <SummaryCard icon={<BatteryCharging />} label={t('metrics.readyNow')} value={overview.drones.filter((drone) => drone.status === 'available').length} text={t('dashboard.operationalAvailability')} />
+        <SummaryCard icon={<RadioTower />} label={t('metrics.charging')} value={overview.drones.filter((drone) => drone.status === 'charging').length} text={t('metrics.atStations')} />
+      </ManagementSummary>
       <EntityForm title={t('management.addDrone')} onSubmit={submit} busy={busy === 'create-drone'}>
         <input required placeholder={t('management.droneId')} value={draft.id} onChange={(event) => setDraft({ ...draft, id: event.target.value })} />
         <input required placeholder={t('management.model')} value={draft.model} onChange={(event) => setDraft({ ...draft, model: event.target.value })} />
@@ -157,6 +162,11 @@ function CustomersView({ overview, busy, run }: ViewProps) {
   return (
     <>
       <ManagementHeader title={t('management.customerTitle')} text={t('management.customerText')} />
+      <ManagementSummary>
+        <SummaryCard icon={<Users />} label={t('nav.customers')} value={overview.customers.length} text={t('management.customerText')} />
+        <SummaryCard icon={<MapPinned />} label={t('management.location')} value={overview.customers.filter((customer) => customer.location.label).length} text={t('management.address')} />
+        <SummaryCard icon={<PackageCheck />} label={t('advanced.delivered')} value={overview.analytics.deliveredMissions} text={t('dashboard.deliveredToday')} />
+      </ManagementSummary>
       <EntityForm title={t('management.addCustomer')} onSubmit={submit} busy={busy === 'create-customer'}>
         <input required placeholder={t('management.customerId')} value={draft.id} onChange={(event) => setDraft({ ...draft, id: event.target.value })} />
         <input required placeholder={t('management.fullName')} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} />
@@ -201,6 +211,11 @@ function StationsView({ overview, busy, run }: ViewProps) {
   return (
     <>
       <ManagementHeader title={t('management.stationTitle')} text={t('management.stationText')} />
+      <ManagementSummary>
+        <SummaryCard icon={<RadioTower />} label={t('nav.stations')} value={overview.stations.length} text={t('management.stationText')} />
+        <SummaryCard icon={<BatteryCharging />} label={t('management.slots')} value={overview.stations.reduce((sum, station) => sum + station.totalSlots, 0)} text={t('management.totalSlots')} />
+        <SummaryCard icon={<PlaneTakeoff />} label={t('management.availability')} value={overview.stations.reduce((sum, station) => sum + station.totalSlots - station.occupiedSlots, 0)} text={t('metrics.readyNow')} />
+      </ManagementSummary>
       <EntityForm title={t('management.addStation')} onSubmit={submit} busy={busy === 'create-station'}>
         <input required placeholder={t('management.stationId')} value={draft.id} onChange={(event) => setDraft({ ...draft, id: event.target.value })} />
         <input required placeholder={t('management.stationName')} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} />
@@ -248,6 +263,11 @@ function MissionsView({ overview, busy, run }: ViewProps) {
   return (
     <>
       <ManagementHeader title={t('management.deliveryTitle')} text={t('management.deliveryText')} />
+      <ManagementSummary>
+        <SummaryCard icon={<PackageCheck />} label={t('nav.missions')} value={overview.missions.length} text={t('management.deliveryText')} />
+        <SummaryCard icon={<PlaneTakeoff />} label={t('metrics.activeMissions')} value={overview.metrics.activeMissions} text={t('metrics.inProgress')} />
+        <SummaryCard icon={<BatteryCharging />} label={t('dashboard.batteryReadiness')} value={`${overview.metrics.averageBattery}%`} text={t('metrics.avgBattery', { value: overview.metrics.averageBattery })} />
+      </ManagementSummary>
       <EntityForm title={t('management.addDelivery')} onSubmit={submit} busy={busy === 'create-mission'}>
         <input required placeholder={t('management.missionId')} value={draft.id} onChange={(event) => setDraft({ ...draft, id: event.target.value })} />
         <select required value={draft.senderCustomerId} onChange={(event) => setDraft({ ...draft, senderCustomerId: event.target.value })}>
@@ -315,6 +335,14 @@ function MissionsView({ overview, busy, run }: ViewProps) {
 
 function ManagementHeader({ title, text }: { title: string; text: string }) {
   return <div className="management-header"><div><h2>{title}</h2><p>{text}</p></div></div>
+}
+
+function ManagementSummary({ children }: { children: ReactNode }) {
+  return <div className="management-summary">{children}</div>
+}
+
+function SummaryCard({ icon, label, value, text }: { icon: ReactNode; label: string; value: string | number; text: string }) {
+  return <article className="summary-card"><span>{icon}</span><div><small>{label}</small><strong>{value}</strong><p>{text}</p></div></article>
 }
 
 function EntityForm({ title, busy, children, onSubmit }: { title: string; busy: boolean; children: ReactNode; onSubmit: (event: FormEvent) => void }) {

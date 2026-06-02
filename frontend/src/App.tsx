@@ -597,7 +597,7 @@ function DroneRow({ drone }: { drone: Drone }) {
   return (
     <div className="drone-row">
       <span className={`dot ${drone.status}`} />
-      <div>
+      <div className="drone-identity">
         <strong>{drone.id}</strong>
         <small>{drone.model}</small>
         <span className="verified-ledger mini">{t('dashboard.ledgerVerified')}</span>
@@ -607,8 +607,10 @@ function DroneRow({ drone }: { drone: Drone }) {
         <div className="battery-line"><i style={{ width: `${drone.battery}%` }} /></div>
         <small>{t('dashboard.health')} {drone.batteryHealth}%</small>
       </div>
-      <div className="battery"><BatteryCharging size={14} /> {drone.battery}%</div>
-      <span className="camera-chip">{t('dashboard.liveCamera')}</span>
+      <div className="drone-actions">
+        <div className="battery"><BatteryCharging size={14} /> {drone.battery}%</div>
+        <span className="camera-chip">{t('dashboard.liveCamera')}</span>
+      </div>
     </div>
   )
 }
