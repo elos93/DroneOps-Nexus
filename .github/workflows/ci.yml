@@ -20,6 +20,7 @@ jobs:
             package-lock.json
             backend/package-lock.json
             frontend/package-lock.json
+            mobile/package-lock.json
       - name: Install workspace dependencies
         run: npm ci
       - name: Install API dependencies
@@ -28,10 +29,19 @@ jobs:
         run: npm install --prefix backend --no-audit --no-fund
       - name: Install web dependencies
         run: npm install --prefix frontend --no-audit --no-fund
+      - name: Install mobile dependencies
+        run: npm install --prefix mobile --no-audit --no-fund
       - name: Lint
         run: npm run lint
       - name: Build
         run: npm run build
+      - name: Mobile typecheck
+        run: npm run typecheck --prefix mobile
+      - name: Mobile lint
+        run: npm run lint --prefix mobile
+      - name: Mobile Android export
+        working-directory: mobile
+        run: npx expo export --platform android
       - name: Unit tests
         run: npm run test --prefix backend -- --runInBand
       - name: API integration tests

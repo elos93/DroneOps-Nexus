@@ -7,5 +7,9 @@ coverage/
 .env.*.local
 .vite/
 .vercel/
+.expo/
+mobile/.expo/
+mobile/android/
+mobile/ios/
 .DS_Store
 Thumbs.db

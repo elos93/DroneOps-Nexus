@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "DroneOps Nexus",
+    "slug": "droneops-nexus-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "droneops",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "android": {
+      "package": "com.droneops.nexus",
+      "adaptiveIcon": {
+        "backgroundColor": "#061122"
+      }
+    },
+    "extra": {
+      "apiUrl": "https://droneops-nexus-api.vercel.app/api"
+    }
+  }
+}

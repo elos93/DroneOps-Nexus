@@ -18,6 +18,7 @@ The hosted demo currently runs with seeded in-memory operations data. MongoDB At
 
 - Frontend: React 19, TypeScript, Vite, Tailwind CSS, TanStack Query, Recharts and React Leaflet.
 - Backend: Node.js, NestJS and TypeScript.
+- Mobile: Expo, React Native, TypeScript and TanStack Query.
 - Database: MongoDB Atlas through Mongoose schemas.
 - Live weather: Open-Meteo wind and gust data.
 
@@ -53,6 +54,27 @@ The hosted demo currently runs with seeded in-memory operations data. MongoDB At
 - Emergency Return Home command that recalls an active drone and safely requeues its mission.
 - Demo-mode seed data so development works before Atlas credentials are supplied.
 - MongoDB Atlas bootstrap: when `MONGODB_URI` is configured, empty collections are seeded automatically.
+- Android-first Expo mobile app with booking, Sky Radar tracking and OTP handoff.
+
+## Android Mobile App
+
+The repository includes a real Expo / React Native Android app in `mobile/`.
+
+It connects to the same public DroneOps API and includes a mobile fleet dashboard, customer delivery booking, landing-zone selection, smart quote calculation, Sky Radar tracking and OTP-style secure handoff.
+
+Run it locally:
+
+```bash
+cd mobile
+npm install
+npm run android
+```
+
+Or from the repository root:
+
+```bash
+npm run mobile:android
+```
 
 ## Project Structure
 
@@ -60,6 +82,7 @@ The hosted demo currently runs with seeded in-memory operations data. MongoDB At
 DroneOps-Nexus/
   frontend/   React + Vite operations dashboard
   backend/    NestJS API, MongoDB Atlas integration and weather policy
+  mobile/     Expo + React Native Android app
 ```
 
 ## Start Locally
