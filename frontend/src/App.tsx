@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from 'recharts'
-import { Circle, CircleMarker, MapContainer, Popup, TileLayer } from 'react-leaflet'
+import { Circle, CircleMarker, MapContainer, Polyline, Popup, TileLayer } from 'react-leaflet'
 import {
   Activity,
   BatteryCharging,
@@ -115,6 +115,7 @@ function App() {
     () => data?.drones.map((drone) => ({ name: drone.id, battery: drone.battery })) ?? [],
     [data],
   )
+  const activeDroneCount = data?.drones.filter((drone) => drone.status === 'mission').length ?? 0
 
   useEffect(() => {
     const syncRoute = () => {
@@ -252,11 +253,33 @@ function App() {
           <Metric label={t('metrics.readyNow')} value={data.metrics.ready} hint={t('metrics.avgBattery', { value: data.metrics.averageBattery })} accent="green" />
         </section>
 
+        <section className="dashboard-intel-grid">
+          <FleetHealthOverview
+            airborne={activeDroneCount}
+            totalDrones={data.metrics.totalDrones}
+            delivered={data.analytics.deliveredMissions}
+            chargingLoad={data.analytics.chargingCapacityPercent}
+            maintenanceDue={data.analytics.maintenanceDue}
+          />
+          <PayloadBatteryAnalytics mission={selectedMission} drone={selectedDrone} assessment={flightGate.data} />
+          <FailSafeMatrix noFlyCount={data.noFlyZones.length} alertCount={data.alerts.length} maintenanceDue={data.analytics.maintenanceDue} />
+          <BlackBoxPanel events={data.auditEvents} />
+        </section>
+
         <section className="operations-grid">
           <article className="panel map-panel">
             <PanelTitle title={t('dashboard.mapTitle')} text={t('dashboard.mapText')} />
             <MapContainer center={[32.075, 34.79]} zoom={13} scrollWheelZoom={false} className="map">
               <TileLayer attribution="&copy; OpenStreetMap" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              {data.missions
+                .filter((mission) => mission.routeWaypoints?.length)
+                .map((mission) => (
+                  <Polyline
+                    key={`${mission.id}-trail`}
+                    positions={mission.routeWaypoints!.map((point) => [point.latitude, point.longitude])}
+                    pathOptions={{ color: '#22d3ee', weight: 4, opacity: 0.68 }}
+                  />
+                ))}
               {data.stations.map((station) => (
                 <CircleMarker key={station.id} center={[station.location.latitude, station.location.longitude]} radius={10} pathOptions={{ color: '#38bdf8', fillColor: '#0284c7', fillOpacity: 1 }}>
                   <Popup>{station.name} - {t('dashboard.slotsOpen', { value: station.totalSlots - station.occupiedSlots })}</Popup>
@@ -342,6 +365,122 @@ function Metric({ label, value, hint, accent }: { label: string; value: number; 
   return <article className={`metric ${accent}`}><small>{label}</small><strong>{value}</strong><span>{hint}</span></article>
 }
 
+function FleetHealthOverview({
+  airborne,
+  totalDrones,
+  delivered,
+  chargingLoad,
+  maintenanceDue,
+}: {
+  airborne: number
+  totalDrones: number
+  delivered: number
+  chargingLoad: number
+  maintenanceDue: number
+}) {
+  const { t } = useI18n()
+  const airbornePercent = totalDrones ? Math.round((airborne / totalDrones) * 100) : 0
+  return (
+    <article className="panel intel-panel">
+      <PanelTitle title={t('dashboard.fleetHealthTitle')} text={t('dashboard.fleetHealthText')} />
+      <div className="donut-grid">
+        <Donut value={airbornePercent} label={t('dashboard.airborne')} detail={`${airborne}/${totalDrones}`} color="#22d3ee" />
+        <Donut value={chargingLoad} label={t('dashboard.chargingLoad')} detail={`${chargingLoad}%`} color="#f59e0b" />
+        <Donut value={Math.min(delivered * 12, 100)} label={t('dashboard.deliveredToday')} detail={`${delivered}`} color="#22c55e" />
+        <Donut value={Math.min(maintenanceDue * 34, 100)} label={t('dashboard.maintenanceDue')} detail={`${maintenanceDue}`} color="#8b5cf6" />
+      </div>
+    </article>
+  )
+}
+
+function Donut({ value, label, detail, color }: { value: number; label: string; detail: string; color: string }) {
+  const safeValue = Math.max(0, Math.min(100, value))
+  return (
+    <div className="donut-card">
+      <div className="donut" style={{ background: `conic-gradient(${color} ${safeValue * 3.6}deg, rgba(255,255,255,.07) 0deg)` }}>
+        <span>{detail}</span>
+      </div>
+      <small>{label}</small>
+    </div>
+  )
+}
+
+function PayloadBatteryAnalytics({
+  mission,
+  drone,
+  assessment,
+}: {
+  mission?: Mission
+  drone?: Drone
+  assessment?: Awaited<ReturnType<typeof assessFlight>>
+}) {
+  const { t } = useI18n()
+  const payloadPercent = mission && drone ? Math.min(100, Math.round((mission.payloadKg / drone.maxPayloadKg) * 100)) : 0
+  const reservePercent = assessment ? Math.max(0, assessment.availableBattery - assessment.batteryRequired) : drone?.battery ?? 0
+  return (
+    <article className="panel intel-panel">
+      <PanelTitle title={t('dashboard.payloadBatteryTitle')} text={t('dashboard.payloadBatteryText')} />
+      <div className="analytics-bars">
+        <IntelBar label={t('dashboard.payloadUsage')} value={payloadPercent} detail={mission && drone ? `${mission.payloadKg} / ${drone.maxPayloadKg} kg` : t('dashboard.noMissionSelected')} />
+        <IntelBar label={t('dashboard.batteryReserve')} value={reservePercent} detail={assessment ? t('dashboard.afterWindCheck') : t('dashboard.runGateForBattery')} />
+      </div>
+      <div className="mini-readouts">
+        <span>{t('dashboard.maxPayload')}: <b>{drone?.maxPayloadKg ?? '-'} kg</b></span>
+        <span>{t('dashboard.energyMultiplier')}: <b>{assessment?.energyMultiplier ?? '-'}</b></span>
+      </div>
+    </article>
+  )
+}
+
+function IntelBar({ label, value, detail }: { label: string; value: number; detail: string }) {
+  const safeValue = Math.max(0, Math.min(100, value))
+  return (
+    <div className="intel-bar">
+      <div><strong>{label}</strong><span>{detail}</span></div>
+      <div className="bar-track"><i style={{ width: `${safeValue}%` }} /></div>
+    </div>
+  )
+}
+
+function FailSafeMatrix({ noFlyCount, alertCount, maintenanceDue }: { noFlyCount: number; alertCount: number; maintenanceDue: number }) {
+  const { t } = useI18n()
+  const actions = [
+    { label: t('dashboard.lowBatteryAction'), value: '15%' },
+    { label: t('dashboard.gpsAction'), value: alertCount > 0 ? t('dashboard.monitoring') : t('dashboard.ready') },
+    { label: t('dashboard.noFlyAction'), value: `${noFlyCount}` },
+    { label: t('dashboard.windAction'), value: maintenanceDue > 0 ? t('dashboard.caution') : t('dashboard.ready') },
+  ]
+  return (
+    <article className="panel intel-panel">
+      <PanelTitle title={t('dashboard.failSafeTitle')} text={t('dashboard.failSafeText')} />
+      <div className="failsafe-grid">
+        {actions.map((action) => <div key={action.label}><b>{action.value}</b><span>{action.label}</span></div>)}
+      </div>
+    </article>
+  )
+}
+
+function BlackBoxPanel({ events }: { events: Array<{ id: string; action: string; entityId: string; actor: string }> }) {
+  const { t } = useI18n()
+  const latestEvents = events.slice(0, 3)
+  return (
+    <article className="panel intel-panel black-box-panel">
+      <PanelTitle title={t('dashboard.blackBoxTitle')} text={t('dashboard.blackBoxText')} />
+      <div className="black-box-stream">
+        {latestEvents.map((event) => (
+          <div key={event.id}><span>{event.action}</span><strong>{event.entityId}</strong><small>{event.actor}</small></div>
+        ))}
+      </div>
+      <div className="log-channels">
+        <span>{t('dashboard.commandLog')}</span>
+        <span>{t('dashboard.telemetryLog')}</span>
+        <span>{t('dashboard.weatherLog')}</span>
+        <span>{t('dashboard.proofLog')}</span>
+      </div>
+    </article>
+  )
+}
+
 function PanelTitle({ title, text }: { title: string; text: string }) {
   const { t } = useI18n()
   return <div className="panel-title"><div><h2>{title}</h2><p>{text}</p></div><span className="live">{t('common.live')}</span></div>
@@ -362,7 +501,23 @@ function MissionRow({ mission }: { mission: Mission }) {
 }
 
 function DroneRow({ drone }: { drone: Drone }) {
-  return <div className="drone-row"><span className={`dot ${drone.status}`} /><strong>{drone.id}</strong><small>{drone.model}</small><div className="battery"><BatteryCharging size={14} /> {drone.battery}%</div></div>
+  const { t } = useI18n()
+  return (
+    <div className="drone-row">
+      <span className={`dot ${drone.status}`} />
+      <div>
+        <strong>{drone.id}</strong>
+        <small>{drone.model}</small>
+      </div>
+      <div className="drone-health">
+        <span>{t(`status.${drone.status}`)}</span>
+        <div className="battery-line"><i style={{ width: `${drone.battery}%` }} /></div>
+        <small>{t('dashboard.health')} {drone.batteryHealth}%</small>
+      </div>
+      <div className="battery"><BatteryCharging size={14} /> {drone.battery}%</div>
+      <span className="camera-chip">{t('dashboard.liveCamera')}</span>
+    </div>
+  )
 }
 
 function statusColor(status: Drone['status']) {
