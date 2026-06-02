@@ -1,13 +1,30 @@
-import { type FormEvent, type ReactNode, useState } from 'react'
+import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { ArrowRight, CreditCard, HeartPulse, MapPinned, PlaneTakeoff, ShieldCheck, Wallet, Zap } from 'lucide-react'
 import { createPublicOrder, quoteOrder } from './api'
 import { LanguageSwitcher, useI18n } from './i18n'
-import type { PublicOrderInput } from './types'
+import type { Location, PublicOrderInput } from './types'
 
 type LandingProps = {
   onOpenControl: () => void
   onBook: () => void
+}
+
+type AddressFields = {
+  city: string
+  street: string
+  houseNumber: string
+  apartment: string
+}
+
+type AddressSuggestion = {
+  id: string
+  label: string
+  latitude: number
+  longitude: number
+  city: string
+  street: string
+  houseNumber: string
 }
 
 export function LandingPage({ onOpenControl, onBook }: LandingProps) {
@@ -47,6 +64,8 @@ export function LandingPage({ onOpenControl, onBook }: LandingProps) {
 export function BookingPortal({ onBack, onOpenControl }: { onBack: () => void; onOpenControl: () => void }) {
   const { t } = useI18n()
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'bit' | 'paypal'>('card')
+  const [pickupAddress, setPickupAddress] = useState<AddressFields>({ city: 'Tel Aviv', street: 'Central Medical Lab', houseNumber: '', apartment: '' })
+  const [destinationAddress, setDestinationAddress] = useState<AddressFields>({ city: 'Tel Aviv', street: 'North Clinic', houseNumber: '', apartment: '' })
   const [draft, setDraft] = useState<PublicOrderInput>({
     senderName: 'Emergency Lab',
     senderEmail: 'lab@example.com',
@@ -120,14 +139,26 @@ export function BookingPortal({ onBack, onOpenControl }: { onBack: () => void; o
           </div>
           <h3 className="form-section-title">{t('booking.routeSection')}</h3>
           <div className="booking-fields">
-            <label className="field-label">{t('booking.pickup')}
-              <input required value={draft.origin.label} onChange={(event) => setDraft({ ...draft, origin: { ...draft.origin, label: event.target.value } })} placeholder={t('booking.pickup')} />
-              <span>{t('booking.pickupHelp')}</span>
-            </label>
-            <label className="field-label">{t('booking.destination')}
-              <input required value={draft.destination.label} onChange={(event) => setDraft({ ...draft, destination: { ...draft.destination, label: event.target.value } })} placeholder={t('booking.destination')} />
-              <span>{t('booking.destinationHelp')}</span>
-            </label>
+            <AddressAutocomplete
+              fields={pickupAddress}
+              help={t('booking.pickupHelp')}
+              location={draft.origin}
+              onChange={(nextFields, nextLocation) => {
+                setPickupAddress(nextFields)
+                setDraft((current) => ({ ...current, origin: nextLocation }))
+              }}
+              title={t('booking.pickup')}
+            />
+            <AddressAutocomplete
+              fields={destinationAddress}
+              help={t('booking.destinationHelp')}
+              location={draft.destination}
+              onChange={(nextFields, nextLocation) => {
+                setDestinationAddress(nextFields)
+                setDraft((current) => ({ ...current, destination: nextLocation }))
+              }}
+              title={t('booking.destination')}
+            />
             <label className="field-label">{t('booking.payloadKg')}
               <input type="number" min="0.1" step="0.1" value={draft.payloadKg} onChange={(event) => setDraft({ ...draft, payloadKg: Number(event.target.value) })} />
               <span>{t('booking.payloadHelp')}</span>
@@ -174,6 +205,178 @@ export function BookingPortal({ onBack, onOpenControl }: { onBack: () => void; o
       </section>
     </main>
   )
+}
+
+function AddressAutocomplete({
+  fields,
+  help,
+  location,
+  onChange,
+  title,
+}: {
+  fields: AddressFields
+  help: string
+  location: Location
+  onChange: (fields: AddressFields, location: Location) => void
+  title: string
+}) {
+  const { t } = useI18n()
+  const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([])
+  const [isOpen, setIsOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+
+  const searchQuery = useMemo(() => {
+    const query = [fields.street, fields.houseNumber, fields.city].filter(Boolean).join(' ')
+    return query.trim()
+  }, [fields.city, fields.houseNumber, fields.street])
+
+  useEffect(() => {
+    if (searchQuery.length < 2) {
+      return
+    }
+    const controller = new AbortController()
+    const timer = window.setTimeout(async () => {
+      setIsLoading(true)
+      try {
+        const url = new URL('https://nominatim.openstreetmap.org/search')
+        url.searchParams.set('format', 'json')
+        url.searchParams.set('limit', '7')
+        url.searchParams.set('addressdetails', '1')
+        url.searchParams.set('countrycodes', 'il')
+        url.searchParams.set('accept-language', 'he,en')
+        url.searchParams.set('q', `${searchQuery}, Israel`)
+        const response = await fetch(url, { signal: controller.signal })
+        const data = (await response.json()) as Array<{
+          osm_id: number
+          display_name: string
+          lat: string
+          lon: string
+          address?: Record<string, string>
+        }>
+        setSuggestions(data.map((item) => {
+          const address = item.address ?? {}
+          return {
+            id: `${item.osm_id}-${item.lat}-${item.lon}`,
+            label: item.display_name,
+            latitude: Number(item.lat),
+            longitude: Number(item.lon),
+            city: address.city ?? address.town ?? address.village ?? address.suburb ?? fields.city,
+            street: address.road ?? address.pedestrian ?? address.footway ?? address.neighbourhood ?? fields.street,
+            houseNumber: address.house_number ?? fields.houseNumber,
+          }
+        }))
+      } catch {
+        if (!controller.signal.aborted) {
+          setSuggestions([])
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false)
+        }
+      }
+    }, 350)
+    return () => {
+      controller.abort()
+      window.clearTimeout(timer)
+    }
+  }, [fields.city, fields.houseNumber, fields.street, searchQuery])
+
+  const updateFields = (nextFields: AddressFields) => {
+    onChange(nextFields, {
+      ...location,
+      label: formatAddressLabel(nextFields, t('booking.addressApartmentShort')),
+    })
+    setIsOpen(true)
+  }
+
+  const selectSuggestion = (suggestion: AddressSuggestion) => {
+    const nextFields = {
+      city: suggestion.city,
+      street: suggestion.street,
+      houseNumber: suggestion.houseNumber,
+      apartment: fields.apartment,
+    }
+    onChange(nextFields, {
+      latitude: suggestion.latitude,
+      longitude: suggestion.longitude,
+      label: formatAddressLabel(nextFields, t('booking.addressApartmentShort')),
+    })
+    setIsOpen(false)
+  }
+
+  return (
+    <fieldset className="address-card">
+      <legend>{title}</legend>
+      <p>{help}</p>
+      <div className="address-grid">
+        <label className="field-label">{t('booking.addressCity')}
+          <input
+            autoComplete="address-level2"
+            required
+            value={fields.city}
+            onChange={(event) => updateFields({ ...fields, city: event.target.value })}
+            onFocus={() => setIsOpen(true)}
+            placeholder={t('booking.addressCityPlaceholder')}
+          />
+          <span>{t('booking.addressCityHelp')}</span>
+        </label>
+        <label className="field-label">{t('booking.addressStreet')}
+          <input
+            autoComplete="street-address"
+            required
+            value={fields.street}
+            onChange={(event) => updateFields({ ...fields, street: event.target.value })}
+            onFocus={() => setIsOpen(true)}
+            placeholder={t('booking.addressStreetPlaceholder')}
+          />
+          <span>{t('booking.addressStreetHelp')}</span>
+        </label>
+        <label className="field-label">{t('booking.addressHouse')}
+          <input
+            autoComplete="address-line2"
+            inputMode="numeric"
+            required
+            value={fields.houseNumber}
+            onChange={(event) => updateFields({ ...fields, houseNumber: event.target.value })}
+            onFocus={() => setIsOpen(true)}
+            placeholder={t('booking.addressHousePlaceholder')}
+          />
+          <span>{t('booking.addressHouseHelp')}</span>
+        </label>
+        <label className="field-label">{t('booking.addressApartment')}
+          <input
+            autoComplete="address-line3"
+            value={fields.apartment}
+            onChange={(event) => updateFields({ ...fields, apartment: event.target.value })}
+            placeholder={t('booking.addressApartmentPlaceholder')}
+          />
+          <span>{t('booking.addressApartmentHelp')}</span>
+        </label>
+      </div>
+      <div className="address-summary">
+        <MapPinned size={15} />
+        <span>{formatAddressLabel(fields, t('booking.addressApartmentShort')) || t('booking.addressEmpty')}</span>
+      </div>
+      {isOpen && searchQuery.length >= 2 && (suggestions.length > 0 || isLoading) && (
+        <div className="address-suggestions">
+          {isLoading && <span>{t('booking.addressSearching')}</span>}
+          {suggestions.map((suggestion) => (
+            <button key={suggestion.id} type="button" onClick={() => selectSuggestion(suggestion)}>
+              {suggestion.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </fieldset>
+  )
+}
+
+function formatAddressLabel(fields: AddressFields, apartmentPrefix: string) {
+  return [
+    fields.street && fields.houseNumber ? `${fields.street} ${fields.houseNumber}` : fields.street,
+    fields.apartment ? `${apartmentPrefix} ${fields.apartment}` : '',
+    fields.city,
+  ].filter(Boolean).join(', ')
 }
 
 function PaymentOption({ active, icon, title, text, onClick }: { active: boolean; icon: ReactNode; title: string; text: string; onClick: () => void }) {
