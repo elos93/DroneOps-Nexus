@@ -46,6 +46,7 @@ The hosted demo currently runs with seeded in-memory operations data. MongoDB At
 - Managed no-fly-zone editor with Atlas persistence when `MONGODB_URI` is configured.
 - Mission telemetry simulator that moves drones along active delivery routes.
 - PWA support with installable manifest and offline app shell.
+- Multilingual UI with English, Spanish and Hebrew, including RTL layout support for Hebrew.
 - Built-in API documentation at [`/api/docs`](https://droneops-nexus-api.vercel.app/api/docs) and schema at [`/api/openapi.json`](https://droneops-nexus-api.vercel.app/api/openapi.json).
 - Notification routing preview for in-app, SMS and email escalation channels.
 - GitHub Actions quality gate for lint, builds, unit tests and API integration tests.

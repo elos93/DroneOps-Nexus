@@ -63,6 +63,7 @@ The system is designed for an operations team managing last-mile drone deliverie
 - Server-side role-based access control for sensitive write operations.
 - Built-in API documentation at `/api/docs` and `/api/openapi.json`.
 - Installable PWA shell for mobile and desktop.
+- Multilingual interface for English, Spanish and Hebrew with persisted language preference and RTL support.
 - GitHub Actions validation for linting, builds and automated tests.
 
 ## Technology Stack

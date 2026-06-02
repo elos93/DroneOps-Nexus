@@ -22,11 +22,21 @@
 body { margin: 0; min-width: 320px; background: var(--bg); }
 button, input, select { font: inherit; }
 button { border: 0; cursor: pointer; }
+.language-switcher { min-width: 142px; display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; font-weight: 700; }
+.language-switcher select { height: 38px; padding: 0 10px; border: 1px solid var(--border); border-radius: 9px; color: #dae7f7; background: #101f35; }
+html[dir="rtl"] body { direction: rtl; }
+html[dir="rtl"] .sidebar { border-right: 0; border-left: 1px solid var(--border); }
+html[dir="rtl"] .mobile-menu-button { left: auto; right: 15px; }
+html[dir="rtl"] .mobile-close { right: auto; left: 14px; }
+html[dir="rtl"] .alert-button span { right: auto; left: -5px; }
+html[dir="rtl"] .metric::after { inset: auto auto -55px -35px; }
+html[dir="rtl"] .timeline > div { padding: 3px 29px 14px 0; border-left: 0; border-right: 1px solid var(--border); }
+html[dir="rtl"] .timeline svg { left: auto; right: -9px; }
 .ghost { height: 45px; padding: 0 19px; border: 1px solid var(--border); border-radius: 11px; color: #dbeafe; background: transparent; font-weight: 600; }
 .landing, .booking { min-height: 100vh; padding: 30px clamp(18px, 6vw, 92px) 52px; background: radial-gradient(circle at 70% 4%, rgba(34,211,238,.14), transparent 34%), #070f1e; }
 .landing-nav { max-width: 1340px; margin: 0 auto 64px; display: flex; justify-content: space-between; align-items: center; gap: 14px; }
 .landing-nav .logo { margin: 0; }
-.landing-nav > div:last-child { display: flex; gap: 12px; }
+.landing-nav > div:last-child { display: flex; gap: 12px; align-items: center; }
 .hero { max-width: 1340px; margin: 0 auto 58px; display: grid; grid-template-columns: 1.05fr .82fr; align-items: center; gap: clamp(34px, 7vw, 96px); }
 .hero h1 { max-width: 690px; margin: 0 0 18px; font-size: clamp(43px, 5.2vw, 72px); line-height: 1.03; letter-spacing: -.07em; }
 .hero-copy { max-width: 565px; margin: 0 0 33px; color: #92a6c2; font-size: 18px; line-height: 1.65; }
@@ -88,6 +98,8 @@ button { border: 0; cursor: pointer; }
 .sidebar-footer { margin-top: auto; }
 .role-switch { display: grid; gap: 7px; margin: 0 10px 15px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .role-switch select { height: 39px; padding: 0 9px; border: 1px solid var(--border); border-radius: 8px; color: #dbe8f9; background: #101f35; font-size: 12px; text-transform: none; }
+.sidebar-footer .language-switcher { margin: 0 10px 15px; display: grid; align-items: stretch; }
+.sidebar-footer .language-switcher select { width: 100%; }
 .sidebar-footer p { margin: 22px 10px 0; padding: 13px; color: var(--muted); background: #0e1c30; border: 1px solid var(--border); border-radius: 11px; font-size: 11px; line-height: 1.55; }
 .mobile-menu-button, .mobile-close, .menu-backdrop { display: none; }
 .dashboard { min-width: 0; padding: 33px 38px 38px; }
@@ -277,6 +289,7 @@ h1 { margin: 0 0 7px; font-size: 32px; letter-spacing: -.055em; }
 @media (max-width: 720px) {
   .landing, .booking { padding: 19px 15px 28px; }
   .landing-nav { margin-bottom: 43px; flex-wrap: wrap; }
+  .landing-nav > div:last-child { flex-wrap: wrap; }
   .landing-nav .primary, .landing-nav .ghost { padding: 0 12px; font-size: 12px; }
   .hero { margin-bottom: 28px; gap: 29px; }
   .hero h1 { font-size: 40px; }

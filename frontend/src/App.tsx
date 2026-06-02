@@ -24,6 +24,7 @@ import {
 import { assessFlight, getOverview, setAuthToken } from './api'
 import { AdvancedViews, type AdvancedView } from './AdvancedViews'
 import { AuthView } from './AuthView'
+import { LanguageSwitcher, useI18n } from './i18n'
 import { ManagementViews, type View } from './ManagementViews'
 import { BookingPortal, LandingPage } from './PortalViews'
 import type { AuthSession, Drone, Mission } from './types'
@@ -39,6 +40,7 @@ const storedSession = (() => {
 setAuthToken(storedSession?.accessToken)
 
 function App() {
+  const { t } = useI18n()
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['operations-overview'],
     queryFn: getOverview,
@@ -111,19 +113,20 @@ function App() {
         <button className="mobile-close" aria-label="Close navigation" onClick={() => setMobileMenuOpen(false)}><X size={20} /></button>
         <div className="logo"><span className="logo-mark" /><div><strong>DroneOps</strong><small>NEXUS</small></div></div>
         <nav>
-          <button className={view === 'dashboard' ? 'active' : ''} onClick={() => changeView('dashboard')}><Activity size={19} /> Dashboard</button>
-          <button onClick={() => setPortalView('book')}><ShoppingBag size={19} /> Book Delivery</button>
-          {role !== 'customer' && <button className={view === 'drones' ? 'active' : ''} onClick={() => changeView('drones')}><MapPinned size={19} /> Drones</button>}
-          {role !== 'customer' && <button className={view === 'missions' ? 'active' : ''} onClick={() => changeView('missions')}><Route size={19} /> Missions</button>}
-          {role === 'admin' && <button className={view === 'customers' ? 'active' : ''} onClick={() => changeView('customers')}><Users size={19} /> Customers</button>}
-          {role !== 'customer' && <button className={view === 'stations' ? 'active' : ''} onClick={() => changeView('stations')}><RadioTower size={19} /> Stations</button>}
-          <button className={view === 'intelligence' ? 'active' : ''} onClick={() => changeView('intelligence')}><BrainCircuit size={19} /> Intelligence</button>
-          <button className={view === 'tracking' ? 'active' : ''} onClick={() => changeView('tracking')}><MapPinned size={19} /> Tracking</button>
-          {role === 'admin' && <button className={view === 'maintenance' ? 'active' : ''} onClick={() => changeView('maintenance')}><Stethoscope size={19} /> Maintenance</button>}
-          {role === 'admin' && <button className={view === 'audit' ? 'active' : ''} onClick={() => changeView('audit')}><ClipboardList size={19} /> Audit Log</button>}
+          <button className={view === 'dashboard' ? 'active' : ''} onClick={() => changeView('dashboard')}><Activity size={19} /> {t('nav.dashboard')}</button>
+          <button onClick={() => setPortalView('book')}><ShoppingBag size={19} /> {t('nav.bookDelivery')}</button>
+          {role !== 'customer' && <button className={view === 'drones' ? 'active' : ''} onClick={() => changeView('drones')}><MapPinned size={19} /> {t('nav.drones')}</button>}
+          {role !== 'customer' && <button className={view === 'missions' ? 'active' : ''} onClick={() => changeView('missions')}><Route size={19} /> {t('nav.missions')}</button>}
+          {role === 'admin' && <button className={view === 'customers' ? 'active' : ''} onClick={() => changeView('customers')}><Users size={19} /> {t('nav.customers')}</button>}
+          {role !== 'customer' && <button className={view === 'stations' ? 'active' : ''} onClick={() => changeView('stations')}><RadioTower size={19} /> {t('nav.stations')}</button>}
+          <button className={view === 'intelligence' ? 'active' : ''} onClick={() => changeView('intelligence')}><BrainCircuit size={19} /> {t('nav.intelligence')}</button>
+          <button className={view === 'tracking' ? 'active' : ''} onClick={() => changeView('tracking')}><MapPinned size={19} /> {t('nav.tracking')}</button>
+          {role === 'admin' && <button className={view === 'maintenance' ? 'active' : ''} onClick={() => changeView('maintenance')}><Stethoscope size={19} /> {t('nav.maintenance')}</button>}
+          {role === 'admin' && <button className={view === 'audit' ? 'active' : ''} onClick={() => changeView('audit')}><ClipboardList size={19} /> {t('nav.audit')}</button>}
         </nav>
         <div className="sidebar-footer">
-          <label className="role-switch">Role preview
+          <LanguageSwitcher />
+          <label className="role-switch">{t('nav.role')}
             <select value={role} disabled>
               <option value={role}>{session.user.name} ({role})</option>
             </select>
@@ -135,41 +138,41 @@ function App() {
               setSession(undefined)
             }}
           >
-            <Settings size={18} /> Sign Out
+            <Settings size={18} /> {t('nav.signOut')}
           </button>
-          <button onClick={() => setLightMode((enabled) => !enabled)}><Settings size={18} /> {lightMode ? 'Dark Mode' : 'Light Mode'}</button>
-          <p>{data.storageMode === 'mongodb-atlas' ? 'MongoDB Atlas connected' : 'Demo mode - add Atlas URI'}</p>
+          <button onClick={() => setLightMode((enabled) => !enabled)}><Settings size={18} /> {lightMode ? t('nav.darkMode') : t('nav.lightMode')}</button>
+          <p>{data.storageMode === 'mongodb-atlas' ? t('nav.mongo') : t('nav.demo')}</p>
         </div>
       </aside>
 
       <main className="dashboard">
         <header className="header">
           <div>
-            <p className="eyebrow">Fleet Operations Platform</p>
-            <h1>{view === 'dashboard' ? 'Command Dashboard' : view[0].toUpperCase() + view.slice(1)}</h1>
-            <p className="subtitle">Live missions, weather-aware dispatch and complete operations management</p>
+            <p className="eyebrow">{t('header.eyebrow')}</p>
+            <h1>{view === 'dashboard' ? t('header.dashboard') : translatedViewTitle(view, t)}</h1>
+            <p className="subtitle">{t('header.subtitle')}</p>
           </div>
           <div className="header-actions">
             <button className="icon-button alert-button" onClick={() => changeView('intelligence')}>
               <Bell size={18} /><span>{data.alerts.length}</span>
             </button>
             <button className="icon-button" onClick={() => setLightMode((enabled) => !enabled)}>{lightMode ? <Moon size={18} /> : <Sun size={18} />}</button>
-            <button className="primary" onClick={() => refetch()}>Refresh Live Data</button>
+            <button className="primary" onClick={() => refetch()}>{t('header.refresh')}</button>
             <button className="icon-button" aria-label="Return to landing page" onClick={() => setPortalView('landing')}><PlaneTakeoff size={18} /></button>
           </div>
         </header>
 
         {view === 'dashboard' ? <>
         <section className="metrics">
-          <Metric label="Total Drones" value={data.metrics.totalDrones} hint="Registered fleet" accent="blue" />
-          <Metric label="Active Missions" value={data.metrics.activeMissions} hint="In progress" accent="cyan" />
-          <Metric label="Charging" value={data.metrics.charging} hint="At stations" accent="amber" />
-          <Metric label="Ready Now" value={data.metrics.ready} hint={`${data.metrics.averageBattery}% avg battery`} accent="green" />
+          <Metric label={t('metrics.totalDrones')} value={data.metrics.totalDrones} hint={t('metrics.registeredFleet')} accent="blue" />
+          <Metric label={t('metrics.activeMissions')} value={data.metrics.activeMissions} hint={t('metrics.inProgress')} accent="cyan" />
+          <Metric label={t('metrics.charging')} value={data.metrics.charging} hint={t('metrics.atStations')} accent="amber" />
+          <Metric label={t('metrics.readyNow')} value={data.metrics.ready} hint={t('metrics.avgBattery', { value: data.metrics.averageBattery })} accent="green" />
         </section>
 
         <section className="operations-grid">
           <article className="panel map-panel">
-            <PanelTitle title="Live Fleet Map" text="Drone and station positions" />
+            <PanelTitle title={t('dashboard.mapTitle')} text={t('dashboard.mapText')} />
             <MapContainer center={[32.075, 34.79]} zoom={13} scrollWheelZoom={false} className="map">
               <TileLayer attribution="&copy; OpenStreetMap" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               {data.stations.map((station) => (
@@ -196,14 +199,14 @@ function App() {
           </article>
 
           <article className="panel gate-panel">
-            <PanelTitle title="Weather Flight Gate" text="Open-Meteo live safety check" />
+            <PanelTitle title={t('dashboard.weatherTitle')} text={t('dashboard.weatherText')} />
             <div className="selection">
-              <label>Pending mission
+              <label>{t('dashboard.pendingMission')}
                 <select value={selectedMission?.id ?? ''} onChange={(event) => setSelectedMissionId(event.target.value)}>
                   {pendingMissions.map((mission) => <option key={mission.id} value={mission.id}>{mission.id} - {mission.destination.label}</option>)}
                 </select>
               </label>
-              <label>Available drone
+              <label>{t('dashboard.availableDrone')}
                 <select value={selectedDrone?.id ?? ''} onChange={(event) => setSelectedDroneId(event.target.value)}>
                   {availableDrones.map((drone) => <option key={drone.id} value={drone.id}>{drone.id} - {drone.battery}%</option>)}
                 </select>
@@ -211,24 +214,24 @@ function App() {
             </div>
             <button className="flight-button" disabled={!selectedDrone || !selectedMission || flightGate.isPending} onClick={runWeatherGate}>
               <PlaneTakeoff size={18} />
-              {flightGate.isPending ? 'Checking live wind...' : 'Evaluate Takeoff'}
+              {flightGate.isPending ? t('dashboard.checkingWind') : t('dashboard.evaluate')}
             </button>
             {flightGate.data ? <DecisionCard assessment={flightGate.data} /> : (
-              <div className="empty-gate">Select a mission and run live wind verification before dispatch.</div>
+              <div className="empty-gate">{t('dashboard.emptyGate')}</div>
             )}
-            {flightGate.isError && <p className="api-error">Weather service unavailable. Try again shortly.</p>}
+            {flightGate.isError && <p className="api-error">{t('dashboard.weatherError')}</p>}
           </article>
         </section>
 
         <section className="bottom-grid">
           <article className="panel">
-            <PanelTitle title="Mission Queue" text="Priority delivery pipeline" />
+            <PanelTitle title={t('dashboard.missionQueue')} text={t('dashboard.missionPipeline')} />
             <div className="mission-list">
               {data.missions.map((mission) => <MissionRow key={mission.id} mission={mission} />)}
             </div>
           </article>
           <article className="panel">
-            <PanelTitle title="Battery Readiness" text="Current fleet charge level" />
+            <PanelTitle title={t('dashboard.batteryReadiness')} text={t('dashboard.currentCharge')} />
             <div className="chart">
               <ResponsiveContainer width="100%" height={190}>
                 <AreaChart data={batteryChart}>
@@ -241,7 +244,7 @@ function App() {
             </div>
           </article>
           <article className="panel fleet-panel">
-            <PanelTitle title="Fleet Status" text="Operational availability" />
+            <PanelTitle title={t('dashboard.fleetStatus')} text={t('dashboard.operationalAvailability')} />
             {data.drones.map((drone) => <DroneRow key={drone.id} drone={drone} />)}
           </article>
         </section>
@@ -258,7 +261,8 @@ function Metric({ label, value, hint, accent }: { label: string; value: number; 
 }
 
 function PanelTitle({ title, text }: { title: string; text: string }) {
-  return <div className="panel-title"><div><h2>{title}</h2><p>{text}</p></div><span className="live">LIVE</span></div>
+  const { t } = useI18n()
+  return <div className="panel-title"><div><h2>{title}</h2><p>{text}</p></div><span className="live">{t('common.live')}</span></div>
 }
 
 function DecisionCard({ assessment }: { assessment: Awaited<ReturnType<typeof assessFlight>> }) {
@@ -270,7 +274,8 @@ function DecisionCard({ assessment }: { assessment: Awaited<ReturnType<typeof as
 }
 
 function MissionRow({ mission }: { mission: Mission }) {
-  return <div className="mission-row"><div><strong>{mission.id}</strong><small>{mission.customer}</small></div><p>{mission.origin.label} <span>to</span> {mission.destination.label}</p><b className={mission.priority}>{mission.priority}</b><em className={mission.status}>{mission.status}</em></div>
+  const { t } = useI18n()
+  return <div className="mission-row"><div><strong>{mission.id}</strong><small>{mission.customer}</small></div><p>{mission.origin.label} <span>{t('common.to')}</span> {mission.destination.label}</p><b className={mission.priority}>{mission.priority}</b><em className={mission.status}>{mission.status}</em></div>
 }
 
 function DroneRow({ drone }: { drone: Drone }) {
@@ -282,11 +287,28 @@ function statusColor(status: Drone['status']) {
 }
 
 function LoadingPanel() {
-  return <div className="state"><div className="spinner" /><h1>Launching DroneOps Nexus</h1><p>Connecting to operations API...</p></div>
+  const { t } = useI18n()
+  return <div className="state"><div className="spinner" /><h1>{t('common.loading')}</h1><p>{t('common.connecting')}</p></div>
 }
 
 function ErrorPanel({ onRetry }: { onRetry: () => void }) {
-  return <div className="state"><h1>API is offline</h1><p>Start the NestJS backend to load operations data.</p><button className="primary" onClick={onRetry}>Retry Connection</button></div>
+  const { t } = useI18n()
+  return <div className="state"><h1>{t('common.apiOffline')}</h1><p>{t('common.startBackend')}</p><button className="primary" onClick={onRetry}>{t('common.retry')}</button></div>
+}
+
+function translatedViewTitle(view: View | AdvancedView, t: (key: string) => string) {
+  const keys: Record<View | AdvancedView, string> = {
+    dashboard: 'nav.dashboard',
+    drones: 'nav.drones',
+    missions: 'nav.missions',
+    customers: 'nav.customers',
+    stations: 'nav.stations',
+    intelligence: 'nav.intelligence',
+    tracking: 'nav.tracking',
+    maintenance: 'nav.maintenance',
+    audit: 'nav.audit',
+  }
+  return t(keys[view])
 }
 
 export default App

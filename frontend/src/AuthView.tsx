@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from 'react'
 import { LockKeyhole, ShieldCheck } from 'lucide-react'
 import { login } from './api'
+import { LanguageSwitcher, useI18n } from './i18n'
 import type { AuthSession } from './types'
 
 type Props = {
@@ -15,6 +16,7 @@ const demoUsers = [
 ]
 
 export function AuthView({ onAuthenticated, onBack }: Props) {
+  const { t } = useI18n()
   const [email, setEmail] = useState(demoUsers[0].email)
   const [password, setPassword] = useState(demoUsers[0].password)
   const [error, setError] = useState<string>()
@@ -27,7 +29,7 @@ export function AuthView({ onAuthenticated, onBack }: Props) {
     try {
       onAuthenticated(await login(email, password))
     } catch {
-      setError('Login failed. Check the selected demo credentials.')
+      setError(t('auth.error'))
     } finally {
       setBusy(false)
     }
@@ -36,22 +38,23 @@ export function AuthView({ onAuthenticated, onBack }: Props) {
   return (
     <main className="auth-screen">
       <section className="auth-card">
+        <LanguageSwitcher />
         <div className="feature-icon"><LockKeyhole /></div>
-        <p className="eyebrow">Secure Operations Console</p>
-        <h1>Sign in to manage fleet operations</h1>
-        <p>Public booking stays open. Fleet changes, dispatch and geofence management require an authenticated role.</p>
+        <p className="eyebrow">{t('auth.eyebrow')}</p>
+        <h1>{t('auth.title')}</h1>
+        <p>{t('auth.copy')}</p>
         <div className="demo-logins">
-          {demoUsers.map((user) => (
+          {demoUsers.map((user, index) => (
             <button key={user.email} onClick={() => { setEmail(user.email); setPassword(user.password) }}>
-              <ShieldCheck size={15} /> {user.label}
+              <ShieldCheck size={15} /> {index === 0 ? t('auth.admin') : index === 1 ? t('auth.dispatcher') : t('auth.customer')}
             </button>
           ))}
         </div>
         <form onSubmit={submit} className="auth-form">
           <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
           <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
-          <button className="primary" disabled={busy}>{busy ? 'Signing in...' : 'Enter Control Center'}</button>
-          <button className="ghost" type="button" onClick={onBack}>Back to landing</button>
+          <button className="primary" disabled={busy}>{busy ? t('auth.signing') : t('auth.enter')}</button>
+          <button className="ghost" type="button" onClick={onBack}>{t('auth.back')}</button>
         </form>
         {error && <p className="api-error">{error}</p>}
       </section>

@@ -2,6 +2,7 @@ import { type FormEvent, type ReactNode, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { ArrowRight, HeartPulse, MapPinned, PlaneTakeoff, ShieldCheck, Zap } from 'lucide-react'
 import { createPublicOrder, quoteOrder } from './api'
+import { LanguageSwitcher, useI18n } from './i18n'
 import type { PublicOrderInput } from './types'
 
 type LandingProps = {
@@ -10,39 +11,41 @@ type LandingProps = {
 }
 
 export function LandingPage({ onOpenControl, onBook }: LandingProps) {
+  const { t } = useI18n()
   return (
     <main className="landing">
       <header className="landing-nav">
         <div className="logo"><span className="logo-mark" /><div><strong>DroneOps</strong><small>NEXUS</small></div></div>
-        <div><button className="ghost" onClick={onOpenControl}>Operations Console</button><button className="primary" onClick={onBook}>Book Delivery</button></div>
+        <div><LanguageSwitcher /><button className="ghost" onClick={onOpenControl}>{t('landing.console')}</button><button className="primary" onClick={onBook}>{t('landing.book')}</button></div>
       </header>
       <section className="hero">
         <div>
-          <p className="eyebrow">Autonomous Urban Logistics</p>
-          <h1>Mission-critical delivery controlled by live intelligence.</h1>
-          <p className="hero-copy">Weather-aware drone dispatch, medical cold-chain delivery and real-time operations visibility for modern cities.</p>
+          <p className="eyebrow">{t('landing.eyebrow')}</p>
+          <h1>{t('landing.title')}</h1>
+          <p className="hero-copy">{t('landing.copy')}</p>
           <div className="hero-actions">
-            <button className="primary" onClick={onBook}>Request a Delivery <ArrowRight size={17} /></button>
-            <button className="ghost" onClick={onOpenControl}>Explore Control Center</button>
+            <button className="primary" onClick={onBook}>{t('landing.request')} <ArrowRight size={17} /></button>
+            <button className="ghost" onClick={onOpenControl}>{t('landing.explore')}</button>
           </div>
         </div>
         <article className="hero-card">
-          <div className="flight-line"><PlaneTakeoff /><span>Priority medical mission</span><b>READY</b></div>
-          <h2>Tel Aviv Central <span>to</span> North Clinic</h2>
-          <div className="hero-stats"><strong>6 min<small>ETA</small></strong><strong>94%<small>Battery</small></strong><strong>GO<small>Wind Gate</small></strong></div>
-          <p><ShieldCheck size={16} /> Cold-chain monitoring and no-fly rerouting enabled.</p>
+          <div className="flight-line"><PlaneTakeoff /><span>{t('landing.priorityMission')}</span><b>{t('landing.ready')}</b></div>
+          <h2>{t('landing.origin')} <span>{t('common.to')}</span> {t('landing.destination')}</h2>
+          <div className="hero-stats"><strong>6 {t('landing.min')}<small>{t('landing.eta')}</small></strong><strong>94%<small>{t('landing.battery')}</small></strong><strong>GO<small>{t('landing.windGate')}</small></strong></div>
+          <p><ShieldCheck size={16} /> {t('landing.coldChain')}</p>
         </article>
       </section>
       <section className="feature-cards">
-        <Feature icon={<HeartPulse />} title="Medical Priority" text="Temperature-controlled urgent shipments with dedicated handling." />
-        <Feature icon={<MapPinned />} title="Smart Routes" text="Automatic bypass planning around protected airspace." />
-        <Feature icon={<Zap />} title="Live Decisions" text="Wind-aware takeoff checks and forecast scheduling." />
+        <Feature icon={<HeartPulse />} title={t('landing.medicalPriority')} text={t('landing.medicalText')} />
+        <Feature icon={<MapPinned />} title={t('landing.smartRoutes')} text={t('landing.smartRoutesText')} />
+        <Feature icon={<Zap />} title={t('landing.liveDecisions')} text={t('landing.liveDecisionsText')} />
       </section>
     </main>
   )
 }
 
 export function BookingPortal({ onBack, onOpenControl }: { onBack: () => void; onOpenControl: () => void }) {
+  const { t } = useI18n()
   const [draft, setDraft] = useState<PublicOrderInput>({
     senderName: 'Emergency Lab',
     senderEmail: 'lab@example.com',
@@ -68,49 +71,49 @@ export function BookingPortal({ onBack, onOpenControl }: { onBack: () => void; o
   return (
     <main className="booking">
       <header className="landing-nav">
-        <button className="ghost" onClick={onBack}>Back to DroneOps</button>
-        <button className="ghost" onClick={onOpenControl}>Operations Console</button>
+        <button className="ghost" onClick={onBack}>{t('booking.back')}</button>
+        <div><LanguageSwitcher /><button className="ghost" onClick={onOpenControl}>{t('landing.console')}</button></div>
       </header>
       <section className="booking-layout">
         <div className="booking-heading">
-          <p className="eyebrow">Customer Delivery Portal</p>
-          <h1>Request a drone delivery</h1>
-          <p>Get an instant route, ETA and price estimate. Medical deliveries include cold-chain controls.</p>
+          <p className="eyebrow">{t('booking.eyebrow')}</p>
+          <h1>{t('booking.title')}</h1>
+          <p>{t('booking.copy')}</p>
         </div>
         <form className="booking-form" onSubmit={calculate}>
-          <h2>Shipment details</h2>
+          <h2>{t('booking.shipment')}</h2>
           <div className="booking-fields">
-            <input required value={draft.senderName} onChange={(event) => setDraft({ ...draft, senderName: event.target.value })} placeholder="Sender name" />
-            <input required type="email" value={draft.senderEmail} onChange={(event) => setDraft({ ...draft, senderEmail: event.target.value })} placeholder="Sender email" />
-            <input required value={draft.senderPhone} onChange={(event) => setDraft({ ...draft, senderPhone: event.target.value })} placeholder="Sender phone" />
-            <input required value={draft.recipientName} onChange={(event) => setDraft({ ...draft, recipientName: event.target.value })} placeholder="Recipient name" />
-            <input required type="email" value={draft.recipientEmail} onChange={(event) => setDraft({ ...draft, recipientEmail: event.target.value })} placeholder="Recipient email" />
-            <input required value={draft.recipientPhone} onChange={(event) => setDraft({ ...draft, recipientPhone: event.target.value })} placeholder="Recipient phone" />
-            <input required value={draft.origin.label} onChange={(event) => setDraft({ ...draft, origin: { ...draft.origin, label: event.target.value } })} placeholder="Pickup location" />
-            <input required value={draft.destination.label} onChange={(event) => setDraft({ ...draft, destination: { ...draft.destination, label: event.target.value } })} placeholder="Destination" />
+            <input required value={draft.senderName} onChange={(event) => setDraft({ ...draft, senderName: event.target.value })} placeholder={t('booking.senderName')} />
+            <input required type="email" value={draft.senderEmail} onChange={(event) => setDraft({ ...draft, senderEmail: event.target.value })} placeholder={t('booking.senderEmail')} />
+            <input required value={draft.senderPhone} onChange={(event) => setDraft({ ...draft, senderPhone: event.target.value })} placeholder={t('booking.senderPhone')} />
+            <input required value={draft.recipientName} onChange={(event) => setDraft({ ...draft, recipientName: event.target.value })} placeholder={t('booking.recipientName')} />
+            <input required type="email" value={draft.recipientEmail} onChange={(event) => setDraft({ ...draft, recipientEmail: event.target.value })} placeholder={t('booking.recipientEmail')} />
+            <input required value={draft.recipientPhone} onChange={(event) => setDraft({ ...draft, recipientPhone: event.target.value })} placeholder={t('booking.recipientPhone')} />
+            <input required value={draft.origin.label} onChange={(event) => setDraft({ ...draft, origin: { ...draft.origin, label: event.target.value } })} placeholder={t('booking.pickup')} />
+            <input required value={draft.destination.label} onChange={(event) => setDraft({ ...draft, destination: { ...draft.destination, label: event.target.value } })} placeholder={t('booking.destination')} />
             <input type="number" min="0.1" step="0.1" value={draft.payloadKg} onChange={(event) => setDraft({ ...draft, payloadKg: Number(event.target.value) })} />
             <select value={draft.priority} onChange={(event) => setDraft({ ...draft, priority: event.target.value as PublicOrderInput['priority'] })}>
-              <option value="standard">Standard priority</option><option value="urgent">Urgent priority</option><option value="critical">Critical priority</option>
+              <option value="standard">{t('booking.standardPriority')}</option><option value="urgent">{t('booking.urgentPriority')}</option><option value="critical">{t('booking.criticalPriority')}</option>
             </select>
             <select value={draft.serviceType} onChange={(event) => setDraft({ ...draft, serviceType: event.target.value as PublicOrderInput['serviceType'] })}>
-              <option value="standard">Standard delivery</option><option value="medical">Medical delivery</option>
+              <option value="standard">{t('booking.standardDelivery')}</option><option value="medical">{t('booking.medicalDelivery')}</option>
             </select>
-            <label className="check"><input type="checkbox" checked={draft.temperatureControlled} onChange={(event) => setDraft({ ...draft, temperatureControlled: event.target.checked })} /> Temperature controlled</label>
+            <label className="check"><input type="checkbox" checked={draft.temperatureControlled} onChange={(event) => setDraft({ ...draft, temperatureControlled: event.target.checked })} /> {t('booking.temperatureControlled')}</label>
           </div>
-          <button className="primary" disabled={quote.isPending}> {quote.isPending ? 'Calculating...' : 'Calculate Route & Price'} </button>
+          <button className="primary" disabled={quote.isPending}> {quote.isPending ? t('booking.calculating') : t('booking.calculate')} </button>
         </form>
         <article className="quote-card">
-          <h2>Smart Quote</h2>
-          {!quote.data && <p className="empty-copy">Fill in the request and calculate your delivery offer.</p>}
+          <h2>{t('booking.smartQuote')}</h2>
+          {!quote.data && <p className="empty-copy">{t('booking.emptyQuote')}</p>}
           {quote.data && <>
             <strong className="price">ILS {quote.data.priceIls}</strong>
             <div className="quote-stats"><span>{quote.data.distanceKm} km</span><span>{quote.data.estimatedMinutes} min ETA</span><span>{quote.data.serviceType}</span></div>
             <p className="route-note"><MapPinned size={15} /> {quote.data.routeNotice}</p>
             <button className="flight-button" disabled={order.isPending} onClick={() => order.mutate(draft)}>
-              <PlaneTakeoff size={17} /> {order.isPending ? 'Submitting...' : 'Confirm Delivery Request'}
+              <PlaneTakeoff size={17} /> {order.isPending ? t('booking.confirming') : t('booking.confirm')}
             </button>
           </>}
-          {order.data && <div className="booking-success"><ShieldCheck /><strong>Request received</strong><p>Tracking: {order.data.mission.trackingCode}</p><small>{order.data.notificationPreview[0]}</small></div>}
+          {order.data && <div className="booking-success"><ShieldCheck /><strong>{t('booking.received')}</strong><p>{t('booking.tracking')}: {order.data.mission.trackingCode}</p><small>{order.data.notificationPreview[0]}</small></div>}
         </article>
       </section>
     </main>
