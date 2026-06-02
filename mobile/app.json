@@ -4,6 +4,7 @@
     "slug": "droneops-nexus",
     "version": "0.1.1",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "scheme": "droneops",
     "assetBundlePatterns": [
@@ -13,8 +14,12 @@
       "package": "com.droneops.nexus",
       "versionCode": 2,
       "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#061122"
       }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
     },
     "extra": {
       "apiUrl": "https://droneops-nexus-api.vercel.app/api",

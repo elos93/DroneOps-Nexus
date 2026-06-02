@@ -19,8 +19,12 @@ import type {
   StationInput,
   TrackingResult,
 } from './types'
+import { Platform } from 'react-native'
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://droneops-nexus-api.vercel.app/api'
+const DEFAULT_API_URL =
+  Platform.OS === 'web' ? 'http://localhost:3100/api' : 'https://droneops-nexus-api.vercel.app/api'
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? DEFAULT_API_URL
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
