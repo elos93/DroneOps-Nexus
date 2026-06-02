@@ -39,10 +39,12 @@ import {
   releaseCharge,
   simulateMissionStep,
 } from './api'
+import { languageOptions, type Language, useI18n } from './i18n'
 import type { CustomerInput, DroneInput, MissionInput, NoFlyZoneInput, Overview, PublicOrderInput, StationInput } from './types'
 
 type Screen = 'dashboard' | 'book' | 'fleet' | 'missions' | 'customers' | 'stations' | 'intel' | 'track' | 'maintenance' | 'audit'
 type LandingZone = 'Back yard' | 'Roof' | 'Entrance' | 'Balcony'
+type PaymentMethod = 'Card' | 'Bit' | 'PayPal'
 
 const initialOrder: PublicOrderInput = {
   senderName: 'Emergency Lab',
@@ -59,20 +61,21 @@ const initialOrder: PublicOrderInput = {
   temperatureControlled: true,
 }
 
-const screens: { id: Screen; label: string }[] = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'book', label: 'Book' },
-  { id: 'fleet', label: 'Fleet' },
-  { id: 'missions', label: 'Missions' },
-  { id: 'customers', label: 'Customers' },
-  { id: 'stations', label: 'Stations' },
-  { id: 'intel', label: 'Intel' },
-  { id: 'track', label: 'Track' },
-  { id: 'maintenance', label: 'Service' },
-  { id: 'audit', label: 'Audit' },
+const screens: { id: Screen; labelKey: string }[] = [
+  { id: 'dashboard', labelKey: 'nav.dashboard' },
+  { id: 'book', labelKey: 'nav.book' },
+  { id: 'fleet', labelKey: 'nav.fleet' },
+  { id: 'missions', labelKey: 'nav.missions' },
+  { id: 'customers', labelKey: 'nav.customers' },
+  { id: 'stations', labelKey: 'nav.stations' },
+  { id: 'intel', labelKey: 'nav.intel' },
+  { id: 'track', labelKey: 'nav.track' },
+  { id: 'maintenance', labelKey: 'nav.maintenance' },
+  { id: 'audit', labelKey: 'nav.audit' },
 ]
 
 export function DroneOpsMobile() {
+  const { t, isRtl } = useI18n()
   const [screen, setScreen] = useState<Screen>('dashboard')
   const [trackingCode, setTrackingCode] = useState('TRACK-MS207')
   const overview = useQuery({ queryKey: ['mobile-overview'], queryFn: getOverview, refetchInterval: 8000 })
@@ -82,23 +85,24 @@ export function DroneOpsMobile() {
   return (
     <LinearGradient colors={['#061122', '#081a2e', '#061122']} style={styles.app}>
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.header}>
+        <View style={[styles.header, isRtl && styles.rtlRow]}>
           <View style={styles.logoMark} />
           <View style={styles.flex}>
             <Text style={styles.eyebrow}>DRONEOPS NEXUS</Text>
-            <Text style={styles.title}>Mobile Command</Text>
-            <Text style={styles.muted}>All core web features, shaped for Android operations.</Text>
+            <Text style={[styles.title, isRtl && styles.rtlText]}>{t('app.title')}</Text>
+            <Text style={[styles.muted, isRtl && styles.rtlText]}>{t('app.subtitle')}</Text>
           </View>
         </View>
+        <LanguageSwitcher />
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.nav}>
           {screens.map((item) => (
-            <Tab key={item.id} active={screen === item.id} label={item.label} onPress={() => setScreen(item.id)} />
+            <Tab key={item.id} active={screen === item.id} label={t(item.labelKey)} onPress={() => setScreen(item.id)} />
           ))}
         </ScrollView>
 
-        {overview.isLoading && <LoadingCard text="Connecting to live fleet..." />}
-        {overview.isError && <EmptyCard text="Could not load fleet data." />}
+        {overview.isLoading && <LoadingCard text={t('common.loadingFleet')} />}
+        {overview.isError && <EmptyCard text={t('common.loadError')} />}
         {overview.data && (
           <View style={styles.stack}>
             {screen === 'dashboard' && <Dashboard overview={overview.data} onRefresh={refresh} />}
@@ -118,32 +122,50 @@ export function DroneOpsMobile() {
   )
 }
 
+function landingZoneKey(zone: LandingZone) {
+  return {
+    'Back yard': 'landing.backYard',
+    Roof: 'landing.roof',
+    Entrance: 'landing.entrance',
+    Balcony: 'landing.balcony',
+  }[zone]
+}
+
+function paymentKey(method: PaymentMethod) {
+  return {
+    Card: 'payment.card',
+    Bit: 'payment.bit',
+    PayPal: 'payment.paypal',
+  }[method]
+}
+
 function Dashboard({ overview, onRefresh }: { overview: Overview; onRefresh: () => void }) {
+  const { t } = useI18n()
   const ready = overview.drones.filter((drone) => drone.status === 'available').length
   const airborne = overview.drones.filter((drone) => drone.status === 'mission').length
 
   return (
     <>
       <View style={styles.heroCard}>
-        <Text style={styles.heroKicker}>Live operations platform</Text>
-        <Text style={styles.heroTitle}>Command center in your pocket.</Text>
-        <Text style={styles.heroText}>Fleet health, dispatch risk, charging capacity, alerts and customer delivery flow from one Android-ready dashboard.</Text>
-        <Pressable style={styles.smallButton} onPress={onRefresh}><Text style={styles.smallButtonText}>Refresh live data</Text></Pressable>
+        <Text style={styles.heroKicker}>{t('dashboard.kicker')}</Text>
+        <Text style={styles.heroTitle}>{t('dashboard.title')}</Text>
+        <Text style={styles.heroText}>{t('dashboard.text')}</Text>
+        <Pressable style={styles.smallButton} onPress={onRefresh}><Text style={styles.smallButtonText}>{t('common.refresh')}</Text></Pressable>
       </View>
       <View style={styles.metricGrid}>
-        <Metric label="Total drones" value={overview.metrics.totalDrones} />
-        <Metric label="Active missions" value={overview.metrics.activeMissions} />
-        <Metric label="Ready now" value={ready} />
-        <Metric label="Airborne" value={airborne} />
-        <Metric label="Avg battery" value={`${overview.metrics.averageBattery}%`} />
-        <Metric label="Revenue pending" value={`₪${overview.analytics.pendingRevenueIls}`} />
+        <Metric label={t('dashboard.totalDrones')} value={overview.metrics.totalDrones} />
+        <Metric label={t('dashboard.activeMissions')} value={overview.metrics.activeMissions} />
+        <Metric label={t('dashboard.readyNow')} value={ready} />
+        <Metric label={t('dashboard.airborne')} value={airborne} />
+        <Metric label={t('dashboard.avgBattery')} value={`${overview.metrics.averageBattery}%`} />
+        <Metric label={t('dashboard.revenuePending')} value={`₪${overview.analytics.pendingRevenueIls}`} />
       </View>
       <View style={styles.card}>
-        <SectionTitle title="Fleet Health" text="Battery, service and operational readiness" />
+        <SectionTitle title={t('dashboard.fleetHealth')} text={t('dashboard.fleetHealthText')} />
         {overview.drones.slice(0, 5).map((drone) => <DroneCard key={drone.id} drone={drone} />)}
       </View>
       <View style={styles.card}>
-        <SectionTitle title="Alerts & Notifications" text="Operational warnings and outbound channels" />
+        <SectionTitle title={t('dashboard.alerts')} text={t('dashboard.alertsText')} />
         {overview.alerts.slice(0, 4).map((alert) => (
           <InfoRow key={alert.id} title={alert.title} text={alert.message} badge={alert.severity.toUpperCase()} danger={alert.severity === 'critical'} />
         ))}
@@ -152,12 +174,12 @@ function Dashboard({ overview, onRefresh }: { overview: Overview; onRefresh: () 
         ))}
       </View>
       <View style={styles.card}>
-        <SectionTitle title="Payload & Battery Analytics" text="Smart delivery readiness KPIs" />
+        <SectionTitle title={t('dashboard.analytics')} text={t('dashboard.analyticsText')} />
         <View style={styles.metricGrid}>
-          <Metric label="Utilization" value={`${overview.analytics.fleetUtilizationPercent}%`} />
-          <Metric label="Charging load" value={`${overview.analytics.chargingCapacityPercent}%`} />
-          <Metric label="Avg payload" value={`${overview.analytics.averagePayloadKg}kg`} />
-          <Metric label="Avg route" value={`${overview.analytics.averageRouteKm}km`} />
+          <Metric label={t('dashboard.utilization')} value={`${overview.analytics.fleetUtilizationPercent}%`} />
+          <Metric label={t('dashboard.chargingLoad')} value={`${overview.analytics.chargingCapacityPercent}%`} />
+          <Metric label={t('dashboard.avgPayload')} value={`${overview.analytics.averagePayloadKg}kg`} />
+          <Metric label={t('dashboard.avgRoute')} value={`${overview.analytics.averageRouteKm}km`} />
         </View>
       </View>
     </>
@@ -165,9 +187,10 @@ function Dashboard({ overview, onRefresh }: { overview: Overview; onRefresh: () 
 }
 
 function BookingScreen({ onTrack }: { onTrack: (code: string) => void }) {
+  const { t } = useI18n()
   const [order, setOrder] = useState<PublicOrderInput>(initialOrder)
   const [landingZone, setLandingZone] = useState<LandingZone>('Back yard')
-  const [paymentMethod, setPaymentMethod] = useState<'Card' | 'Bit' | 'PayPal'>('Card')
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Card')
   const quote = useMutation({ mutationFn: quoteOrder })
   const createOrder = useMutation({
     mutationFn: createPublicOrder,
@@ -178,28 +201,28 @@ function BookingScreen({ onTrack }: { onTrack: (code: string) => void }) {
   return (
     <>
       <View style={styles.card}>
-        <SectionTitle title="Book Drone Delivery" text="Customer portal, payment preference and address fields" />
-        <Field label="Sender name" value={order.senderName} onChange={(value) => update('senderName', value)} hint="Who sends the package?" />
-        <Field label="Sender phone" value={order.senderPhone} onChange={(value) => update('senderPhone', value)} keyboardType="phone-pad" hint="Example: 050-1111111" />
-        <Field label="Recipient name" value={order.recipientName} onChange={(value) => update('recipientName', value)} />
-        <Field label="Recipient phone" value={order.recipientPhone} onChange={(value) => update('recipientPhone', value)} keyboardType="phone-pad" />
-        <Field label="Pickup address" value={order.origin.label} onChange={(value) => setOrder((current) => ({ ...current, origin: { ...current.origin, label: value } }))} hint="City, street, house and apartment" />
-        <Field label="Destination address" value={order.destination.label} onChange={(value) => setOrder((current) => ({ ...current, destination: { ...current.destination, label: value } }))} />
-        <Field label="Payload kg" value={String(order.payloadKg)} onChange={(value) => update('payloadKg', Number(value) || 0.1)} keyboardType="decimal-pad" />
-        <ChoiceRow label="Landing zone" items={['Back yard', 'Roof', 'Entrance', 'Balcony']} active={landingZone} onPick={(value) => setLandingZone(value as LandingZone)} />
-        <ChoiceRow label="Payment" items={['Card', 'Bit', 'PayPal']} active={paymentMethod} onPick={(value) => setPaymentMethod(value as typeof paymentMethod)} />
+        <SectionTitle title={t('booking.title')} text={t('booking.text')} />
+        <Field label={t('booking.senderName')} value={order.senderName} onChange={(value) => update('senderName', value)} hint={t('booking.senderNameHint')} />
+        <Field label={t('booking.senderPhone')} value={order.senderPhone} onChange={(value) => update('senderPhone', value)} keyboardType="phone-pad" hint={t('booking.phoneHint')} />
+        <Field label={t('booking.recipientName')} value={order.recipientName} onChange={(value) => update('recipientName', value)} />
+        <Field label={t('booking.recipientPhone')} value={order.recipientPhone} onChange={(value) => update('recipientPhone', value)} keyboardType="phone-pad" />
+        <Field label={t('booking.pickup')} value={order.origin.label} onChange={(value) => setOrder((current) => ({ ...current, origin: { ...current.origin, label: value } }))} hint={t('booking.pickupHint')} />
+        <Field label={t('booking.destination')} value={order.destination.label} onChange={(value) => setOrder((current) => ({ ...current, destination: { ...current.destination, label: value } }))} />
+        <Field label={t('booking.payload')} value={String(order.payloadKg)} onChange={(value) => update('payloadKg', Number(value) || 0.1)} keyboardType="decimal-pad" />
+        <ChoiceRow label={t('booking.landingZone')} items={['Back yard', 'Roof', 'Entrance', 'Balcony']} getLabel={(value) => t(landingZoneKey(value as LandingZone))} active={landingZone} onPick={(value) => setLandingZone(value as LandingZone)} />
+        <ChoiceRow label={t('booking.payment')} items={['Card', 'Bit', 'PayPal']} getLabel={(value) => t(paymentKey(value as PaymentMethod))} active={paymentMethod} onPick={(value) => setPaymentMethod(value as PaymentMethod)} />
         <Pressable style={styles.primaryButton} onPress={() => quote.mutate(order)}>
-          <Text style={styles.primaryText}>{quote.isPending ? 'Calculating...' : 'Calculate Route & Price'}</Text>
+          <Text style={styles.primaryText}>{quote.isPending ? t('booking.calculating') : t('booking.calculate')}</Text>
         </Pressable>
       </View>
       {quote.data && (
         <View style={styles.quoteCard}>
-          <Text style={styles.heroKicker}>Smart quote</Text>
+          <Text style={styles.heroKicker}>{t('booking.smartQuote')}</Text>
           <Text style={styles.price}>₪{quote.data.priceIls}</Text>
-          <Text style={styles.heroText}>{quote.data.distanceKm} km · {quote.data.estimatedMinutes} min · {landingZone} · {paymentMethod}</Text>
+          <Text style={styles.heroText}>{quote.data.distanceKm} km · {quote.data.estimatedMinutes} min · {t(landingZoneKey(landingZone))} · {t(paymentKey(paymentMethod))}</Text>
           <Text style={styles.muted}>{quote.data.routeNotice}</Text>
           <Pressable style={styles.flightButton} onPress={() => createOrder.mutate(order)}>
-            <Text style={styles.flightText}>{createOrder.isPending ? 'Submitting...' : 'Confirm Delivery Request'}</Text>
+            <Text style={styles.flightText}>{createOrder.isPending ? t('booking.submitting') : t('booking.submit')}</Text>
           </Pressable>
         </View>
       )}
@@ -208,6 +231,7 @@ function BookingScreen({ onTrack }: { onTrack: (code: string) => void }) {
 }
 
 function FleetScreen({ overview, onRefresh }: { overview: Overview; onRefresh: () => void }) {
+  const { t } = useI18n()
   const [draft, setDraft] = useState<DroneInput>({
     id: `DX-${Math.floor(Math.random() * 80) + 30}`,
     model: 'AeroLift X4',
@@ -219,19 +243,19 @@ function FleetScreen({ overview, onRefresh }: { overview: Overview; onRefresh: (
 
   return (
     <>
-      <EntityForm title="Add Drone" text="Create, charge, release, recall and remove fleet units" busy={action.isPending} onSubmit={() => action.mutate(() => createDrone(draft))}>
-        <Field label="Drone ID" value={draft.id} onChange={(id) => setDraft({ ...draft, id })} />
-        <Field label="Model" value={draft.model} onChange={(model) => setDraft({ ...draft, model })} />
-        <Field label="Battery" value={String(draft.battery)} keyboardType="number-pad" onChange={(battery) => setDraft({ ...draft, battery: Number(battery) || 0 })} />
+      <EntityForm title={t('fleet.addTitle')} text={t('fleet.addText')} busy={action.isPending} onSubmit={() => action.mutate(() => createDrone(draft))}>
+        <Field label={t('fleet.id')} value={draft.id} onChange={(id) => setDraft({ ...draft, id })} />
+        <Field label={t('fleet.model')} value={draft.model} onChange={(model) => setDraft({ ...draft, model })} />
+        <Field label={t('fleet.battery')} value={String(draft.battery)} keyboardType="number-pad" onChange={(battery) => setDraft({ ...draft, battery: Number(battery) || 0 })} />
       </EntityForm>
       {overview.drones.map((drone) => (
         <View key={drone.id} style={styles.card}>
           <DroneCard drone={drone} />
           <ButtonRow>
-            <MiniButton label="Charge" onPress={() => action.mutate(() => chargeDrone(drone.id, overview.stations[0]?.id ?? ''))} />
-            <MiniButton label="Release" onPress={() => action.mutate(() => releaseCharge(drone.id, 45))} />
-            <MiniButton label="Return" onPress={() => action.mutate(() => emergencyReturnHome(drone.id))} />
-            <MiniButton label="Delete" danger onPress={() => action.mutate(() => deleteDrone(drone.id))} />
+            <MiniButton label={t('fleet.charge')} onPress={() => action.mutate(() => chargeDrone(drone.id, overview.stations[0]?.id ?? ''))} />
+            <MiniButton label={t('fleet.release')} onPress={() => action.mutate(() => releaseCharge(drone.id, 45))} />
+            <MiniButton label={t('fleet.returnHome')} onPress={() => action.mutate(() => emergencyReturnHome(drone.id))} />
+            <MiniButton label={t('fleet.delete')} danger onPress={() => action.mutate(() => deleteDrone(drone.id))} />
           </ButtonRow>
         </View>
       ))}
@@ -240,6 +264,7 @@ function FleetScreen({ overview, onRefresh }: { overview: Overview; onRefresh: (
 }
 
 function MissionsScreen({ overview, onRefresh, onTrack }: { overview: Overview; onRefresh: () => void; onTrack: (id: string) => void }) {
+  const { t } = useI18n()
   const firstSender = overview.customers[0]?.id ?? ''
   const firstTarget = overview.customers[1]?.id ?? firstSender
   const [draft, setDraft] = useState<MissionInput>({
@@ -255,27 +280,27 @@ function MissionsScreen({ overview, onRefresh, onTrack }: { overview: Overview; 
 
   return (
     <>
-      <EntityForm title="Create Mission" text="Mission lifecycle, dispatch, weather gate and tracking" busy={action.isPending} onSubmit={() => action.mutate(() => createMission(draft))}>
-        <Field label="Mission ID" value={draft.id} onChange={(id) => setDraft({ ...draft, id })} />
-        <Field label="Payload kg" value={String(draft.payloadKg)} keyboardType="decimal-pad" onChange={(payloadKg) => setDraft({ ...draft, payloadKg: Number(payloadKg) || 0.1 })} />
-        <ChoiceRow label="Priority" items={['standard', 'urgent', 'critical']} active={draft.priority} onPick={(priority) => setDraft({ ...draft, priority: priority as MissionInput['priority'] })} />
+      <EntityForm title={t('missions.createTitle')} text={t('missions.createText')} busy={action.isPending} onSubmit={() => action.mutate(() => createMission(draft))}>
+        <Field label={t('missions.id')} value={draft.id} onChange={(id) => setDraft({ ...draft, id })} />
+        <Field label={t('missions.payload')} value={String(draft.payloadKg)} keyboardType="decimal-pad" onChange={(payloadKg) => setDraft({ ...draft, payloadKg: Number(payloadKg) || 0.1 })} />
+        <ChoiceRow label={t('missions.priority')} items={['standard', 'urgent', 'critical']} getLabel={(value) => t(`common.priority.${value}`)} active={draft.priority} onPick={(priority) => setDraft({ ...draft, priority: priority as MissionInput['priority'] })} />
       </EntityForm>
       <View style={styles.card}>
-        <SectionTitle title="Weather Flight Gate" text="Evaluate takeoff before dispatch" />
-        <ChoiceRow label="Drone" items={overview.drones.map((drone) => drone.id)} active={selectedDroneId} onPick={setSelectedDroneId} />
+        <SectionTitle title={t('missions.flightGate')} text={t('missions.flightGateText')} />
+        <ChoiceRow label={t('missions.drone')} items={overview.drones.map((drone) => drone.id)} active={selectedDroneId} onPick={setSelectedDroneId} />
       </View>
       {overview.missions.map((mission) => (
         <View key={mission.id} style={styles.card}>
           <InfoRow title={`${mission.id} · ${mission.customer}`} text={`${mission.origin.label} → ${mission.destination.label}`} badge={mission.status} />
           <Progress value={mission.progressPercent} />
-          <Text style={styles.muted}>Payload {mission.payloadKg}kg · ETA {mission.etaMinutes}m · {mission.priority}</Text>
+          <Text style={styles.muted}>{t('missions.payload')} {mission.payloadKg}kg · ETA {mission.etaMinutes}m · {t(`common.priority.${mission.priority}`)}</Text>
           <ButtonRow>
-            <MiniButton label="Gate" onPress={() => action.mutate(() => assessFlight(selectedDroneId, mission.id))} />
-            <MiniButton label="Dispatch" onPress={() => action.mutate(() => dispatchMission(selectedDroneId, mission.id))} />
-            <MiniButton label="Pickup" onPress={() => action.mutate(() => pickupMission(mission.id))} />
-            <MiniButton label="Sim" onPress={() => action.mutate(() => simulateMissionStep(mission.id))} />
-            <MiniButton label="Track" onPress={() => onTrack(mission.id)} />
-            <MiniButton label="Delete" danger onPress={() => action.mutate(() => deleteMission(mission.id))} />
+            <MiniButton label={t('missions.gate')} onPress={() => action.mutate(() => assessFlight(selectedDroneId, mission.id))} />
+            <MiniButton label={t('missions.dispatch')} onPress={() => action.mutate(() => dispatchMission(selectedDroneId, mission.id))} />
+            <MiniButton label={t('missions.pickup')} onPress={() => action.mutate(() => pickupMission(mission.id))} />
+            <MiniButton label={t('missions.sim')} onPress={() => action.mutate(() => simulateMissionStep(mission.id))} />
+            <MiniButton label={t('missions.track')} onPress={() => onTrack(mission.id)} />
+            <MiniButton label={t('common.delete')} danger onPress={() => action.mutate(() => deleteMission(mission.id))} />
           </ButtonRow>
         </View>
       ))}
@@ -284,6 +309,7 @@ function MissionsScreen({ overview, onRefresh, onTrack }: { overview: Overview; 
 }
 
 function CustomersScreen({ overview, onRefresh }: { overview: Overview; onRefresh: () => void }) {
+  const { t } = useI18n()
   const [draft, setDraft] = useState<CustomerInput>({
     id: `CU-${Math.floor(Math.random() * 900) + 100}`,
     name: 'New Customer',
@@ -294,16 +320,16 @@ function CustomersScreen({ overview, onRefresh }: { overview: Overview; onRefres
   const action = useAction(onRefresh)
   return (
     <>
-      <EntityForm title="Add Customer" text="Customer CRM for delivery requests" busy={action.isPending} onSubmit={() => action.mutate(() => createCustomer(draft))}>
-        <Field label="Name" value={draft.name} onChange={(name) => setDraft({ ...draft, name })} />
-        <Field label="Phone" value={draft.phone} onChange={(phone) => setDraft({ ...draft, phone })} keyboardType="phone-pad" />
-        <Field label="Email" value={draft.email} onChange={(email) => setDraft({ ...draft, email })} />
+      <EntityForm title={t('customers.addTitle')} text={t('customers.addText')} busy={action.isPending} onSubmit={() => action.mutate(() => createCustomer(draft))}>
+        <Field label={t('customers.name')} value={draft.name} onChange={(name) => setDraft({ ...draft, name })} />
+        <Field label={t('customers.phone')} value={draft.phone} onChange={(phone) => setDraft({ ...draft, phone })} keyboardType="phone-pad" />
+        <Field label={t('customers.email')} value={draft.email} onChange={(email) => setDraft({ ...draft, email })} />
       </EntityForm>
       {overview.customers.map((customer) => (
         <View key={customer.id} style={styles.card}>
           <InfoRow title={customer.name} text={`${customer.phone} · ${customer.email}`} badge={customer.id} />
           <Text style={styles.muted}>{customer.location.label}</Text>
-          <MiniButton label="Delete customer" danger onPress={() => action.mutate(() => deleteCustomer(customer.id))} />
+          <MiniButton label={t('customers.delete')} danger onPress={() => action.mutate(() => deleteCustomer(customer.id))} />
         </View>
       ))}
     </>
@@ -311,6 +337,7 @@ function CustomersScreen({ overview, onRefresh }: { overview: Overview; onRefres
 }
 
 function StationsScreen({ overview, onRefresh }: { overview: Overview; onRefresh: () => void }) {
+  const { t } = useI18n()
   const [draft, setDraft] = useState<StationInput>({
     id: `ST-${Math.floor(Math.random() * 90) + 10}`,
     name: 'New Charging Nest',
@@ -320,16 +347,16 @@ function StationsScreen({ overview, onRefresh }: { overview: Overview; onRefresh
   const action = useAction(onRefresh)
   return (
     <>
-      <EntityForm title="Add Station" text="Charging capacity and robotic nesting overview" busy={action.isPending} onSubmit={() => action.mutate(() => createStation(draft))}>
-        <Field label="Station name" value={draft.name} onChange={(name) => setDraft({ ...draft, name })} />
-        <Field label="Slots" value={String(draft.totalSlots)} keyboardType="number-pad" onChange={(slots) => setDraft({ ...draft, totalSlots: Number(slots) || 1 })} />
+      <EntityForm title={t('stations.addTitle')} text={t('stations.addText')} busy={action.isPending} onSubmit={() => action.mutate(() => createStation(draft))}>
+        <Field label={t('stations.name')} value={draft.name} onChange={(name) => setDraft({ ...draft, name })} />
+        <Field label={t('stations.slots')} value={String(draft.totalSlots)} keyboardType="number-pad" onChange={(slots) => setDraft({ ...draft, totalSlots: Number(slots) || 1 })} />
       </EntityForm>
       {overview.stations.map((station) => (
         <View key={station.id} style={styles.card}>
           <InfoRow title={station.name} text={station.location.label} badge={station.id} />
           <Progress value={Math.round((station.occupiedSlots / station.totalSlots) * 100)} />
-          <Text style={styles.muted}>{station.occupiedSlots}/{station.totalSlots} slots occupied</Text>
-          <MiniButton label="Delete station" danger onPress={() => action.mutate(() => deleteStation(station.id))} />
+          <Text style={styles.muted}>{station.occupiedSlots}/{station.totalSlots} {t('stations.occupied')}</Text>
+          <MiniButton label={t('stations.delete')} danger onPress={() => action.mutate(() => deleteStation(station.id))} />
         </View>
       ))}
     </>
@@ -337,6 +364,7 @@ function StationsScreen({ overview, onRefresh }: { overview: Overview; onRefresh
 }
 
 function IntelligenceScreen({ overview, onRefresh }: { overview: Overview; onRefresh: () => void }) {
+  const { t } = useI18n()
   const pending = overview.missions.filter((mission) => mission.status === 'pending')
   const [missionId, setMissionId] = useState(pending[0]?.id ?? overview.missions[0]?.id ?? '')
   const [zoneDraft, setZoneDraft] = useState<NoFlyZoneInput>({
@@ -353,27 +381,27 @@ function IntelligenceScreen({ overview, onRefresh }: { overview: Overview; onRef
   return (
     <>
       <View style={styles.card}>
-        <SectionTitle title="Fleet Intelligence" text="AI dispatch, no-fly zones, weather windows and notifications" />
-        <ChoiceRow label="Mission" items={overview.missions.map((mission) => mission.id)} active={missionId} onPick={setMissionId} />
+        <SectionTitle title={t('intel.title')} text={t('intel.text')} />
+        <ChoiceRow label={t('intel.mission')} items={overview.missions.map((mission) => mission.id)} active={missionId} onPick={setMissionId} />
         {recommendations.data?.map((rec, index) => (
           <InfoRow key={rec.drone.id} title={`#${index + 1} ${rec.drone.id} · Score ${rec.score}`} text={rec.rationale} badge={`${rec.approachKm}km`} />
         ))}
       </View>
       <View style={styles.card}>
-        <SectionTitle title="Weather Scheduling" text="Best departure windows by wind and gusts" />
-        {forecast.data?.bestWindow && <InfoRow title="Best window" text={`${new Date(forecast.data.bestWindow.time).toLocaleTimeString()} · ${forecast.data.bestWindow.speedKmh}/${forecast.data.bestWindow.gustKmh} km/h`} badge={forecast.data.bestWindow.recommendation} />}
+        <SectionTitle title={t('intel.weather')} text={t('intel.weatherText')} />
+        {forecast.data?.bestWindow && <InfoRow title={t('intel.bestWindow')} text={`${new Date(forecast.data.bestWindow.time).toLocaleTimeString()} · ${forecast.data.bestWindow.speedKmh}/${forecast.data.bestWindow.gustKmh} km/h`} badge={forecast.data.bestWindow.recommendation} />}
         {forecast.data?.slots.slice(0, 5).map((slot) => (
           <InfoRow key={slot.time} title={new Date(slot.time).toLocaleTimeString()} text={`${slot.speedKmh}/${slot.gustKmh} km/h`} badge={slot.recommendation} />
         ))}
       </View>
-      <EntityForm title="No-Fly Zone" text="Create dynamic restricted areas" busy={action.isPending} onSubmit={() => action.mutate(() => createNoFlyZone(zoneDraft))}>
-        <Field label="Zone name" value={zoneDraft.name} onChange={(name) => setZoneDraft({ ...zoneDraft, name })} />
-        <Field label="Radius km" value={String(zoneDraft.radiusKm)} keyboardType="decimal-pad" onChange={(radius) => setZoneDraft({ ...zoneDraft, radiusKm: Number(radius) || 0.1 })} />
+      <EntityForm title={t('intel.noFlyTitle')} text={t('intel.noFlyText')} busy={action.isPending} onSubmit={() => action.mutate(() => createNoFlyZone(zoneDraft))}>
+        <Field label={t('intel.zoneName')} value={zoneDraft.name} onChange={(name) => setZoneDraft({ ...zoneDraft, name })} />
+        <Field label={t('intel.radius')} value={String(zoneDraft.radiusKm)} keyboardType="decimal-pad" onChange={(radius) => setZoneDraft({ ...zoneDraft, radiusKm: Number(radius) || 0.1 })} />
       </EntityForm>
       {overview.noFlyZones.map((zone) => (
         <View key={zone.id} style={styles.card}>
           <InfoRow title={zone.name} text={zone.reason} badge={`${zone.radiusKm}km`} danger />
-          <MiniButton label="Remove zone" danger onPress={() => action.mutate(() => deleteNoFlyZone(zone.id))} />
+          <MiniButton label={t('intel.removeZone')} danger onPress={() => action.mutate(() => deleteNoFlyZone(zone.id))} />
         </View>
       ))}
     </>
@@ -381,6 +409,7 @@ function IntelligenceScreen({ overview, onRefresh }: { overview: Overview; onRef
 }
 
 function TrackingScreen({ trackingCode, setTrackingCode, onRefresh }: { trackingCode: string; setTrackingCode: (value: string) => void; onRefresh: () => void }) {
+  const { t } = useI18n()
   const [otp, setOtp] = useState('')
   const tracking = useQuery({ queryKey: ['mobile-tracking', trackingCode], queryFn: () => getTracking(trackingCode), enabled: trackingCode.length > 2 })
   const action = useMutation({
@@ -396,14 +425,14 @@ function TrackingScreen({ trackingCode, setTrackingCode, onRefresh }: { tracking
   return (
     <>
       <View style={styles.card}>
-        <SectionTitle title="Track Delivery" text="Mission report, telemetry simulation and secure handover" />
-        <Field label="Tracking code or mission ID" value={trackingCode} onChange={setTrackingCode} autoCapitalize="characters" />
+        <SectionTitle title={t('tracking.title')} text={t('tracking.text')} />
+        <Field label={t('tracking.code')} value={trackingCode} onChange={setTrackingCode} autoCapitalize="characters" />
       </View>
-      {tracking.isLoading && <LoadingCard text="Loading delivery..." />}
+      {tracking.isLoading && <LoadingCard text={t('tracking.loading')} />}
       {tracking.data && (
         <>
           <View style={styles.radarCard}>
-            <Text style={styles.heroKicker}>Sky Radar</Text>
+            <Text style={styles.heroKicker}>{t('tracking.skyRadar')}</Text>
             <View style={styles.radar}>
               <View style={[styles.ring, styles.ringOne]} />
               <View style={[styles.ring, styles.ringTwo]} />
@@ -411,8 +440,8 @@ function TrackingScreen({ trackingCode, setTrackingCode, onRefresh }: { tracking
               <View style={[styles.radarDrone, { left: `${radarPosition}%` }]} />
             </View>
             <View style={styles.metricGrid}>
-              <Metric label="ETA" value={`${tracking.data.estimatedArrivalMinutes}m`} />
-              <Metric label="Progress" value={`${progress}%`} />
+              <Metric label={t('tracking.eta')} value={`${tracking.data.estimatedArrivalMinutes}m`} />
+              <Metric label={t('tracking.progress')} value={`${progress}%`} />
             </View>
           </View>
           <View style={styles.card}>
@@ -420,20 +449,20 @@ function TrackingScreen({ trackingCode, setTrackingCode, onRefresh }: { tracking
             <Progress value={progress} />
             {tracking.data.drone && <Text style={styles.muted}>Drone {tracking.data.drone.id} · Battery {tracking.data.drone.battery}%</Text>}
             <ButtonRow>
-              <MiniButton label="Lifecycle" onPress={() => action.mutate(() => simulateMissionStep(tracking.data!.mission.id))} />
-              <MiniButton label="Telemetry" onPress={() => action.mutate(() => advanceTelemetry(tracking.data!.mission.id))} />
+              <MiniButton label={t('tracking.lifecycle')} onPress={() => action.mutate(() => simulateMissionStep(tracking.data!.mission.id))} />
+              <MiniButton label={t('tracking.telemetry')} onPress={() => action.mutate(() => advanceTelemetry(tracking.data!.mission.id))} />
             </ButtonRow>
           </View>
           <View style={styles.card}>
-            <SectionTitle title="Secure Handover" text="OTP delivery confirmation" />
-            <Text style={styles.muted}>Demo OTP: {tracking.data.demoConfirmationCode ?? tracking.data.mission.proofOfDeliveryCode ?? 'available in transit'}</Text>
-            <Field label="Recipient OTP" value={otp} onChange={setOtp} keyboardType="number-pad" />
+            <SectionTitle title={t('tracking.handover')} text={t('tracking.handoverText')} />
+            <Text style={styles.muted}>{t('tracking.demoOtp')}: {tracking.data.demoConfirmationCode ?? tracking.data.mission.proofOfDeliveryCode ?? 'available in transit'}</Text>
+            <Field label={t('tracking.recipientOtp')} value={otp} onChange={setOtp} keyboardType="number-pad" />
             <Pressable style={styles.primaryButton} onPress={() => action.mutate(() => confirmDelivery(tracking.data!.mission.id, otp))}>
-              <Text style={styles.primaryText}>Confirm Delivery</Text>
+              <Text style={styles.primaryText}>{t('tracking.confirm')}</Text>
             </Pressable>
           </View>
           <View style={styles.card}>
-            <SectionTitle title="Mission Timeline" text="Black-box style lifecycle events" />
+            <SectionTitle title={t('tracking.timeline')} text={t('tracking.timelineText')} />
             {(tracking.data.mission.timeline ?? []).slice().reverse().map((event) => (
               <InfoRow key={`${event.status}-${event.timestamp}`} title={event.title} text={event.detail} badge={new Date(event.timestamp).toLocaleTimeString()} />
             ))}
@@ -445,24 +474,25 @@ function TrackingScreen({ trackingCode, setTrackingCode, onRefresh }: { tracking
 }
 
 function MaintenanceScreen({ overview, onRefresh }: { overview: Overview; onRefresh: () => void }) {
+  const { t } = useI18n()
   const action = useAction(onRefresh)
   return (
     <>
       <View style={styles.card}>
-        <SectionTitle title="Maintenance" text="Battery health, flight hours and service completion" />
+        <SectionTitle title={t('maintenance.title')} text={t('maintenance.text')} />
         <View style={styles.metricGrid}>
-          <Metric label="Due now" value={overview.analytics.maintenanceDue} />
-          <Metric label="Delivered" value={overview.analytics.deliveredMissions} />
+          <Metric label={t('maintenance.dueNow')} value={overview.analytics.maintenanceDue} />
+          <Metric label={t('maintenance.delivered')} value={overview.analytics.deliveredMissions} />
         </View>
       </View>
       {overview.drones.map((drone) => {
         const due = drone.flightHours >= drone.nextServiceHours || drone.batteryHealth < 82
         return (
           <View key={drone.id} style={styles.card}>
-            <InfoRow title={`${drone.id} · ${drone.model}`} text={`${drone.flightHours}h flown · ${drone.completedDeliveries} deliveries`} badge={due ? 'DUE' : 'OK'} danger={due} />
+            <InfoRow title={`${drone.id} · ${drone.model}`} text={`${drone.flightHours}h · ${drone.completedDeliveries} ${t('maintenance.delivered')}`} badge={due ? t('maintenance.due') : t('maintenance.ok')} danger={due} />
             <Progress value={Math.round(drone.batteryHealth)} />
-            <Text style={styles.muted}>Battery health {drone.batteryHealth.toFixed(1)}% · next service at {drone.nextServiceHours}h</Text>
-            <MiniButton label="Complete service" onPress={() => action.mutate(() => completeDroneService(drone.id))} />
+            <Text style={styles.muted}>{t('maintenance.batteryHealth')} {drone.batteryHealth.toFixed(1)}% · {t('maintenance.nextService')} {drone.nextServiceHours}h</Text>
+            <MiniButton label={t('maintenance.complete')} onPress={() => action.mutate(() => completeDroneService(drone.id))} />
           </View>
         )
       })}
@@ -471,9 +501,10 @@ function MaintenanceScreen({ overview, onRefresh }: { overview: Overview; onRefr
 }
 
 function AuditScreen({ overview }: { overview: Overview }) {
+  const { t } = useI18n()
   return (
     <View style={styles.card}>
-      <SectionTitle title="Audit Log" text="Black-box operations ledger" />
+      <SectionTitle title={t('audit.title')} text={t('audit.text')} />
       {overview.auditEvents.map((event) => (
         <InfoRow key={event.id} title={event.action.replaceAll('_', ' ')} text={`${event.entityType}: ${event.entityId} · ${event.detail}`} badge={event.actor} />
       ))}
@@ -482,20 +513,22 @@ function AuditScreen({ overview }: { overview: Overview }) {
 }
 
 function useAction(onRefresh: () => void) {
+  const { t } = useI18n()
   return useMutation({
     mutationFn: (run: () => Promise<unknown>) => run(),
     onSuccess: () => onRefresh(),
-    onError: (error) => Alert.alert('Action failed', error instanceof Error ? error.message : 'Unknown error'),
+    onError: (error) => Alert.alert(t('action.failedTitle'), error instanceof Error ? error.message : t('action.failedFallback')),
   })
 }
 
 function EntityForm({ title, text, busy, children, onSubmit }: { title: string; text: string; busy: boolean; children: React.ReactNode; onSubmit: () => void }) {
+  const { t } = useI18n()
   return (
     <View style={styles.card}>
       <SectionTitle title={title} text={text} />
       {children}
       <Pressable style={styles.primaryButton} disabled={busy} onPress={onSubmit}>
-        <Text style={styles.primaryText}>{busy ? 'Working...' : title}</Text>
+        <Text style={styles.primaryText}>{busy ? t('common.working') : title}</Text>
       </Pressable>
     </View>
   )
@@ -516,25 +549,39 @@ function DroneCard({ drone }: { drone: Overview['drones'][number] }) {
 }
 
 function InfoRow({ title, text, badge, danger }: { title: string; text: string; badge?: string; danger?: boolean }) {
+  const { isRtl } = useI18n()
   return (
-    <View style={[styles.infoRow, danger && styles.infoDanger]}>
+    <View style={[styles.infoRow, isRtl && styles.rtlRow, danger && styles.infoDanger]}>
       <View style={styles.flex}>
-        <Text style={styles.rowTitle}>{title}</Text>
-        <Text style={styles.muted}>{text}</Text>
+        <Text style={[styles.rowTitle, isRtl && styles.rtlText]}>{title}</Text>
+        <Text style={[styles.muted, isRtl && styles.rtlText]}>{text}</Text>
       </View>
       {badge && <Text style={[styles.badge, danger && styles.badgeDanger]}>{badge}</Text>}
     </View>
   )
 }
 
-function ChoiceRow({ label, items, active, onPick }: { label: string; items: string[]; active: string; onPick: (value: string) => void }) {
+function ChoiceRow({
+  label,
+  items,
+  active,
+  onPick,
+  getLabel,
+}: {
+  label: string
+  items: string[]
+  active: string
+  onPick: (value: string) => void
+  getLabel?: (value: string) => string
+}) {
+  const { isRtl } = useI18n()
   return (
     <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, isRtl && styles.rtlText]}>{label}</Text>
       <View style={styles.zoneGrid}>
         {items.map((item) => (
           <Pressable key={item} style={[styles.zone, active === item && styles.zoneActive]} onPress={() => onPick(item)}>
-            <Text style={styles.zoneText}>{item}</Text>
+            <Text style={styles.zoneText}>{getLabel ? getLabel(item) : item}</Text>
           </Pressable>
         ))}
       </View>
@@ -562,20 +609,44 @@ function Tab({ active, label, onPress }: { active: boolean; label: string; onPre
   )
 }
 
+function LanguageSwitcher() {
+  const { language, setLanguage, t } = useI18n()
+  return (
+    <View style={styles.languagePanel}>
+      <Text style={styles.label}>{t('language.label')}</Text>
+      <View style={styles.languageRow}>
+        {languageOptions().map((option: Language) => (
+          <Pressable
+            key={option}
+            style={[styles.languageButton, language === option && styles.languageActive]}
+            onPress={() => setLanguage(option)}
+          >
+            <Text style={[styles.languageText, language === option && styles.languageTextActive]}>
+              {t(`language.${option}`)}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  )
+}
+
 function Metric({ label, value }: { label: string; value: string | number }) {
+  const { isRtl } = useI18n()
   return (
     <View style={styles.metric}>
-      <Text style={styles.metricLabel}>{label}</Text>
-      <Text style={styles.metricValue}>{value}</Text>
+      <Text style={[styles.metricLabel, isRtl && styles.rtlText]}>{label}</Text>
+      <Text style={[styles.metricValue, isRtl && styles.rtlText]}>{value}</Text>
     </View>
   )
 }
 
 function SectionTitle({ title, text }: { title: string; text: string }) {
+  const { isRtl } = useI18n()
   return (
     <View style={styles.sectionTitle}>
-      <Text style={styles.sectionHeading}>{title}</Text>
-      <Text style={styles.muted}>{text}</Text>
+      <Text style={[styles.sectionHeading, isRtl && styles.rtlText]}>{title}</Text>
+      <Text style={[styles.muted, isRtl && styles.rtlText]}>{text}</Text>
     </View>
   )
 }
@@ -600,18 +671,19 @@ function Field({
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters'
   hint?: string
 }) {
+  const { isRtl } = useI18n()
   return (
     <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, isRtl && styles.rtlText]}>{label}</Text>
       <TextInput
         autoCapitalize={autoCapitalize}
         keyboardType={keyboardType}
         onChangeText={onChange}
         placeholderTextColor="#5f728b"
-        style={styles.input}
+        style={[styles.input, isRtl && styles.rtlText]}
         value={value}
       />
-      {hint && <Text style={styles.hint}>{hint}</Text>}
+      {hint && <Text style={[styles.hint, isRtl && styles.rtlText]}>{hint}</Text>}
     </View>
   )
 }
@@ -636,6 +708,29 @@ const styles = StyleSheet.create({
   logoMark: { backgroundColor: '#22d3ee', borderRadius: 16, height: 48, shadowColor: '#22d3ee', shadowOpacity: 0.35, shadowRadius: 18, width: 48 },
   eyebrow: { color: '#22d3ee', fontSize: 11, fontWeight: '900', letterSpacing: 2.2 },
   title: { color: '#f5f9ff', fontSize: 30, fontWeight: '900', letterSpacing: -1.4 },
+  rtlText: { textAlign: 'right', writingDirection: 'rtl' },
+  rtlRow: { flexDirection: 'row-reverse' },
+  languagePanel: {
+    backgroundColor: 'rgba(255,255,255,.04)',
+    borderColor: 'rgba(148,163,184,.15)',
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 9,
+    marginBottom: 14,
+    padding: 12,
+  },
+  languageRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  languageButton: {
+    backgroundColor: '#101f35',
+    borderColor: 'rgba(148,163,184,.16)',
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+  },
+  languageActive: { backgroundColor: '#22d3ee', borderColor: '#22d3ee' },
+  languageText: { color: '#9eb1ca', fontSize: 12, fontWeight: '900' },
+  languageTextActive: { color: '#061122' },
   nav: { marginBottom: 18 },
   tab: { backgroundColor: 'rgba(255,255,255,.04)', borderColor: 'rgba(148,163,184,.15)', borderRadius: 999, borderWidth: 1, marginRight: 8, paddingHorizontal: 14, paddingVertical: 11 },
   tabActive: { backgroundColor: '#22d3ee' },
