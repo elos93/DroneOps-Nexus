@@ -23,6 +23,7 @@ import {
   getTracking,
   simulateMissionStep,
 } from './api'
+import { useI18n } from './i18n'
 import type { NoFlyZoneInput, Overview, Role } from './types'
 
 export type AdvancedView = 'intelligence' | 'tracking' | 'maintenance' | 'audit'
@@ -42,6 +43,7 @@ export function AdvancedViews({ view, overview, onRefresh, role }: Props) {
 }
 
 function IntelligenceView({ overview, onRefresh, role }: Pick<Props, 'overview' | 'onRefresh' | 'role'>) {
+  const { t } = useI18n()
   const pending = overview.missions.filter((mission) => mission.status === 'pending')
   const [zoneDraft, setZoneDraft] = useState<NoFlyZoneInput>({
     id: `NFZ-${overview.noFlyZones.length + 100}`,
@@ -68,18 +70,18 @@ function IntelligenceView({ overview, onRefresh, role }: Pick<Props, 'overview' 
 
   return (
     <section className="advanced">
-      <ViewHeader title="Mission Intelligence" text="Automated risk alerts and AI-style dispatch scoring." icon={<BrainCircuit />} />
+      <ViewHeader title={t('advanced.intelligenceTitle')} text={t('advanced.intelligenceText')} icon={<BrainCircuit />} />
       <div className="insight-metrics">
-        <Insight label="Delivered" value={overview.analytics.deliveredMissions} />
-        <Insight label="Fleet utilization" value={`${overview.analytics.fleetUtilizationPercent}%`} />
-        <Insight label="Charging load" value={`${overview.analytics.chargingCapacityPercent}%`} />
-        <Insight label="Maintenance due" value={overview.analytics.maintenanceDue} danger />
+        <Insight label={t('advanced.delivered')} value={overview.analytics.deliveredMissions} />
+        <Insight label={t('advanced.fleetUtilization')} value={`${overview.analytics.fleetUtilizationPercent}%`} />
+        <Insight label={t('advanced.chargingLoad')} value={`${overview.analytics.chargingCapacityPercent}%`} />
+        <Insight label={t('advanced.maintenanceDue')} value={overview.analytics.maintenanceDue} danger />
       </div>
       <div className="advanced-grid">
         <article className="panel">
-          <h3 className="section-heading"><AlertTriangle size={17} /> Alerts Center</h3>
+          <h3 className="section-heading"><AlertTriangle size={17} /> {t('advanced.alertsCenter')}</h3>
           <div className="alert-list">
-            {overview.alerts.length === 0 && <p className="empty-copy">No operational alerts. Fleet is clear.</p>}
+            {overview.alerts.length === 0 && <p className="empty-copy">{t('advanced.noAlerts')}</p>}
             {overview.alerts.map((alert) => (
               <div className={`alert-card ${alert.severity}`} key={alert.id}>
                 <ShieldAlert size={17} />
@@ -89,7 +91,7 @@ function IntelligenceView({ overview, onRefresh, role }: Pick<Props, 'overview' 
           </div>
         </article>
         <article className="panel">
-          <h3 className="section-heading"><BrainCircuit size={17} /> Smart Dispatch Recommendation</h3>
+          <h3 className="section-heading"><BrainCircuit size={17} /> {t('advanced.smartDispatch')}</h3>
           <select className="standalone-select" value={missionId} onChange={(event) => setMissionId(event.target.value)}>
             {pending.map((mission) => <option value={mission.id} key={mission.id}>{mission.id} - {mission.destination.label}</option>)}
           </select>
@@ -101,12 +103,12 @@ function IntelligenceView({ overview, onRefresh, role }: Pick<Props, 'overview' 
                 <em>{recommendation.score}</em>
               </div>
             ))}
-            {!missionId && <p className="empty-copy">No pending delivery is waiting for dispatch.</p>}
+            {!missionId && <p className="empty-copy">{t('advanced.noPending')}</p>}
           </div>
         </article>
       </div>
       <article className="panel">
-        <h3 className="section-heading"><MapPinned size={17} /> No-Fly Zones</h3>
+        <h3 className="section-heading"><MapPinned size={17} /> {t('advanced.noFlyZones')}</h3>
         {role === 'admin' && (
           <form className="geofence-form" onSubmit={(event) => {
             event.preventDefault()
@@ -115,27 +117,27 @@ function IntelligenceView({ overview, onRefresh, role }: Pick<Props, 'overview' 
             <input value={zoneDraft.id} onChange={(event) => setZoneDraft({ ...zoneDraft, id: event.target.value })} />
             <input value={zoneDraft.name} onChange={(event) => setZoneDraft({ ...zoneDraft, name: event.target.value })} />
             <input type="number" step="0.01" value={zoneDraft.radiusKm} onChange={(event) => setZoneDraft({ ...zoneDraft, radiusKm: Number(event.target.value) })} />
-            <button className="action"><Plus size={14} /> Add Geofence</button>
+            <button className="action"><Plus size={14} /> {t('advanced.addGeofence')}</button>
           </form>
         )}
         <div className="zone-grid">
           {overview.noFlyZones.map((zone) => (
             <div className="zone" key={zone.id}>
               <strong>{zone.name}</strong>
-              <span>{zone.radiusKm} km protected radius</span>
+              <span>{t('advanced.protectedRadius', { value: zone.radiusKm })}</span>
               <p>{zone.reason}</p>
-              {role === 'admin' && <button className="action danger" onClick={() => zoneAction.mutate(() => deleteNoFlyZone(zone.id))}><Trash2 size={14} /> Remove</button>}
+              {role === 'admin' && <button className="action danger" onClick={() => zoneAction.mutate(() => deleteNoFlyZone(zone.id))}><Trash2 size={14} /> {t('advanced.remove')}</button>}
             </div>
           ))}
         </div>
       </article>
       <div className="advanced-grid">
         <article className="panel">
-          <h3 className="section-heading"><MapPinned size={17} /> Weather Scheduling</h3>
+          <h3 className="section-heading"><MapPinned size={17} /> {t('advanced.weatherScheduling')}</h3>
           {forecast.data?.bestWindow && (
             <div className="best-window">
-              <strong>Best departure: {new Date(forecast.data.bestWindow.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong>
-              <p>{forecast.data.bestWindow.speedKmh} km/h wind, {forecast.data.bestWindow.gustKmh} km/h gusts</p>
+              <strong>{t('advanced.bestDeparture')}: {new Date(forecast.data.bestWindow.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong>
+              <p>{forecast.data.bestWindow.speedKmh} {t('dashboard.wind')}, {forecast.data.bestWindow.gustKmh} {t('dashboard.gust')}</p>
             </div>
           )}
           <div className="forecast-list">
@@ -145,7 +147,7 @@ function IntelligenceView({ overview, onRefresh, role }: Pick<Props, 'overview' 
           </div>
         </article>
         <article className="panel">
-          <h3 className="section-heading"><ShieldAlert size={17} /> Notification Routing</h3>
+          <h3 className="section-heading"><ShieldAlert size={17} /> {t('advanced.notificationRouting')}</h3>
           <div className="notification-list">
             {overview.notifications.map((notice) => (
               <div key={notice.id}><strong>{notice.title}</strong><span>{notice.channel}</span><small>{notice.deliveryState}</small></div>
@@ -158,6 +160,7 @@ function IntelligenceView({ overview, onRefresh, role }: Pick<Props, 'overview' 
 }
 
 function TrackingView({ overview, onRefresh, role }: Pick<Props, 'overview' | 'onRefresh' | 'role'>) {
+  const { t } = useI18n()
   const [missionId, setMissionId] = useState(overview.missions[0]?.id ?? '')
   const [confirmationCode, setConfirmationCode] = useState('')
   const tracking = useQuery({
@@ -176,46 +179,46 @@ function TrackingView({ overview, onRefresh, role }: Pick<Props, 'overview' | 'o
 
   return (
     <section className="advanced">
-      <ViewHeader title="Customer Tracking Portal" text="Public delivery visibility, timeline and proof of delivery." icon={<MapPinned />} />
+      <ViewHeader title={t('advanced.trackingTitle')} text={t('advanced.trackingText')} icon={<MapPinned />} />
       <div className="tracking-picker">
         <select value={missionId} onChange={(event) => setMissionId(event.target.value)}>
           {overview.missions.map((mission) => <option key={mission.id} value={mission.id}>{mission.id} - {mission.customer}</option>)}
         </select>
-        <button className="action" onClick={() => window.print()}><Printer size={15} /> Mission Report</button>
+        <button className="action" onClick={() => window.print()}><Printer size={15} /> {t('advanced.missionReport')}</button>
       </div>
       {result && (
         <div className="tracking-grid">
           <article className="panel delivery-card">
             <div className="delivery-code">{result.publicCode}</div>
-            <h2>{result.mission.origin.label} to {result.mission.destination.label}</h2>
-            {result.mission.serviceType === 'medical' && <p className="medical-badge">Medical cold-chain delivery</p>}
-            {result.mission.priceIls && <p>Quoted price: ILS {result.mission.priceIls} | {result.mission.routeNotice}</p>}
-            <p>{result.mission.status === 'delivered' ? 'Delivered successfully' : `ETA ${result.estimatedArrivalMinutes} minutes`}</p>
+            <h2>{result.mission.origin.label} {t('common.to')} {result.mission.destination.label}</h2>
+            {result.mission.serviceType === 'medical' && <p className="medical-badge">{t('advanced.medicalColdChain')}</p>}
+            {result.mission.priceIls && <p>{t('advanced.quotedPrice')}: ILS {result.mission.priceIls} | {result.mission.routeNotice}</p>}
+            <p>{result.mission.status === 'delivered' ? t('advanced.deliveredSuccessfully') : t('advanced.etaMinutes', { value: result.estimatedArrivalMinutes })}</p>
             <div className="progress"><span style={{ width: `${result.mission.progressPercent}%` }} /></div>
-            <strong>{result.mission.progressPercent}% complete</strong>
-            {result.drone && <p>Drone: {result.drone.id} | Battery: {result.drone.battery}%</p>}
+            <strong>{t('advanced.percentComplete', { value: result.mission.progressPercent })}</strong>
+            {result.drone && <p>{t('management.drone')}: {result.drone.id} | {t('management.battery')}: {result.drone.battery}%</p>}
             {role !== 'customer' && (result.mission.status === 'assigned' || result.mission.status === 'in-transit') ? (
               <button className="primary demo-button" onClick={() => action.mutate(() => simulateMissionStep(result.mission.id))}>
-                Run Lifecycle Step
+                {t('advanced.runLifecycle')}
               </button>
             ) : null}
             {role !== 'customer' && (result.mission.status === 'assigned' || result.mission.status === 'in-transit') ? (
               <button className="action demo-button" onClick={() => action.mutate(() => advanceTelemetry(result.mission.id))}>
-                Move drone on route
+                {t('advanced.moveDrone')}
               </button>
             ) : null}
             {result.mission.status === 'in-transit' && (
               <div className="proof">
-                <input value={confirmationCode} onChange={(event) => setConfirmationCode(event.target.value)} placeholder="Recipient OTP" />
+                <input value={confirmationCode} onChange={(event) => setConfirmationCode(event.target.value)} placeholder={t('advanced.recipientOtp')} />
                 <button className="action" onClick={() => action.mutate(() => confirmDelivery(result.mission.id, confirmationCode))}>
-                  Confirm Delivery
+                  {t('advanced.confirmDelivery')}
                 </button>
-                {result.demoConfirmationCode && <small>Demo OTP: {result.demoConfirmationCode}</small>}
+                {result.demoConfirmationCode && <small>{t('advanced.demoOtp')}: {result.demoConfirmationCode}</small>}
               </div>
             )}
           </article>
           <article className="panel">
-            <h3 className="section-heading"><ClipboardList size={17} /> Mission Timeline</h3>
+            <h3 className="section-heading"><ClipboardList size={17} /> {t('advanced.missionTimeline')}</h3>
             <div className="timeline">
               {[...result.mission.timeline].reverse().map((entry) => (
                 <div key={`${entry.status}-${entry.timestamp}`}>
@@ -234,16 +237,17 @@ function TrackingView({ overview, onRefresh, role }: Pick<Props, 'overview' | 'o
 }
 
 function MaintenanceView({ overview, onRefresh }: Pick<Props, 'overview' | 'onRefresh'>) {
+  const { t } = useI18n()
   const service = useMutation({
     mutationFn: completeDroneService,
     onSuccess: () => onRefresh(),
   })
   return (
     <section className="advanced">
-      <ViewHeader title="Fleet Maintenance" text="Battery health, flight hours and preventive service control." icon={<Stethoscope />} />
+      <ViewHeader title={t('advanced.maintenanceTitle')} text={t('advanced.maintenanceText')} icon={<Stethoscope />} />
       <div className="data-table">
         <table>
-          <thead><tr><th>Drone</th><th>Battery health</th><th>Flight hours</th><th>Deliveries</th><th>Next service</th><th>Action</th></tr></thead>
+          <thead><tr><th>{t('management.drone')}</th><th>{t('advanced.batteryHealth')}</th><th>{t('advanced.flightHours')}</th><th>{t('advanced.deliveries')}</th><th>{t('advanced.nextService')}</th><th>{t('management.actions')}</th></tr></thead>
           <tbody>
             {overview.drones.map((drone) => {
               const due = drone.flightHours >= drone.nextServiceHours || drone.batteryHealth < 82
@@ -254,7 +258,7 @@ function MaintenanceView({ overview, onRefresh }: Pick<Props, 'overview' | 'onRe
                   <td>{drone.flightHours}</td>
                   <td>{drone.completedDeliveries}</td>
                   <td>{drone.nextServiceHours} h</td>
-                  <td><button className="action" disabled={drone.status === 'mission' || service.isPending} onClick={() => service.mutate(drone.id)}>Complete Service</button></td>
+                  <td><button className="action" disabled={drone.status === 'mission' || service.isPending} onClick={() => service.mutate(drone.id)}>{t('advanced.completeService')}</button></td>
                 </tr>
               )
             })}
@@ -266,10 +270,11 @@ function MaintenanceView({ overview, onRefresh }: Pick<Props, 'overview' | 'onRe
 }
 
 function AuditView({ overview }: Pick<Props, 'overview'>) {
+  const { t } = useI18n()
   const events = useMemo(() => overview.auditEvents, [overview.auditEvents])
   return (
     <section className="advanced">
-      <ViewHeader title="Audit Log" text="Traceability for operational actions and compliance reviews." icon={<ClipboardList />} />
+      <ViewHeader title={t('advanced.auditTitle')} text={t('advanced.auditText')} icon={<ClipboardList />} />
       <div className="audit-list">
         {events.map((event) => (
           <article className="audit-event" key={event.id}>

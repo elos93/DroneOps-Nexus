@@ -19,6 +19,7 @@ import {
   updateDrone,
   updateStation,
 } from './api'
+import { useI18n } from './i18n'
 import type { Customer, Drone, Location, Overview, Station } from './types'
 
 export type View = 'dashboard' | 'drones' | 'customers' | 'stations' | 'missions'
@@ -66,8 +67,10 @@ type ViewProps = Pick<Props, 'overview'> & {
   busy?: string
   run: (key: string, action: () => Promise<unknown>, success: string) => Promise<void>
 }
+type Translate = (key: string, params?: Record<string, string | number>) => string
 
 function DronesView({ overview, busy, run }: ViewProps) {
+  const { t } = useI18n()
   const [draft, setDraft] = useState({
     id: '',
     model: '',
@@ -78,20 +81,20 @@ function DronesView({ overview, busy, run }: ViewProps) {
 
   function submit(event: FormEvent) {
     event.preventDefault()
-    void run('create-drone', () => createDrone(draft), 'Drone added to the fleet successfully.')
+    void run('create-drone', () => createDrone(draft), t('management.droneAdded'))
   }
 
   return (
     <>
-      <ManagementHeader title="Fleet Management" text="Add drones, update specifications and manage charging cycles." />
-      <EntityForm title="Add Drone" onSubmit={submit} busy={busy === 'create-drone'}>
-        <input required placeholder="Drone ID" value={draft.id} onChange={(event) => setDraft({ ...draft, id: event.target.value })} />
-        <input required placeholder="Model" value={draft.model} onChange={(event) => setDraft({ ...draft, model: event.target.value })} />
-        <input required type="number" min="0" max="100" placeholder="Battery %" value={draft.battery} onChange={(event) => setDraft({ ...draft, battery: Number(event.target.value) })} />
-        <input required type="number" min="0.1" step="0.1" placeholder="Payload kg" value={draft.maxPayloadKg} onChange={(event) => setDraft({ ...draft, maxPayloadKg: Number(event.target.value) })} />
+      <ManagementHeader title={t('management.fleetTitle')} text={t('management.fleetText')} />
+      <EntityForm title={t('management.addDrone')} onSubmit={submit} busy={busy === 'create-drone'}>
+        <input required placeholder={t('management.droneId')} value={draft.id} onChange={(event) => setDraft({ ...draft, id: event.target.value })} />
+        <input required placeholder={t('management.model')} value={draft.model} onChange={(event) => setDraft({ ...draft, model: event.target.value })} />
+        <input required type="number" min="0" max="100" placeholder={t('management.batteryPercent')} value={draft.battery} onChange={(event) => setDraft({ ...draft, battery: Number(event.target.value) })} />
+        <input required type="number" min="0.1" step="0.1" placeholder={t('management.payloadKg')} value={draft.maxPayloadKg} onChange={(event) => setDraft({ ...draft, maxPayloadKg: Number(event.target.value) })} />
         <LocationInputs location={draft.location} onChange={(location) => setDraft({ ...draft, location })} />
       </EntityForm>
-      <DataTable columns={['Drone', 'Status', 'Battery', 'Payload', 'Position', 'Actions']}>
+      <DataTable columns={[t('management.drone'), t('management.status'), t('management.battery'), t('management.payload'), t('management.position'), t('management.actions')]}>
         {overview.drones.map((drone) => (
           <tr key={drone.id}>
             <td><strong>{drone.id}</strong><small>{drone.model}</small></td>
@@ -100,32 +103,32 @@ function DronesView({ overview, busy, run }: ViewProps) {
             <td>{drone.maxPayloadKg} kg</td>
             <td>{drone.location.label}</td>
             <td className="actions">
-              <ActionButton onClick={() => editDrone(drone, run)} disabled={Boolean(busy)}>Edit</ActionButton>
+              <ActionButton onClick={() => editDrone(drone, run, t)} disabled={Boolean(busy)}>{t('management.edit')}</ActionButton>
               {drone.status === 'available' && overview.stations.length > 0 && (
                 <ActionButton
-                  onClick={() => void run(`charge-${drone.id}`, () => chargeDrone(drone.id, overview.stations[0].id), 'Drone sent to charging station.')}
+                  onClick={() => void run(`charge-${drone.id}`, () => chargeDrone(drone.id, overview.stations[0].id), t('management.droneCharging'))}
                   disabled={Boolean(busy)}
                 >
-                  <BatteryCharging size={14} /> Charge
+                  <BatteryCharging size={14} /> {t('management.charge')}
                 </ActionButton>
               )}
               {drone.status === 'charging' && (
                 <ActionButton
-                  onClick={() => void run(`release-${drone.id}`, () => releaseCharge(drone.id, 20), 'Drone released from charging.')}
+                  onClick={() => void run(`release-${drone.id}`, () => releaseCharge(drone.id, 20), t('management.droneReleased'))}
                   disabled={Boolean(busy)}
                 >
-                  Release
+                  {t('management.release')}
                 </ActionButton>
               )}
               {drone.status === 'mission' && (
                 <DangerButton
-                  onClick={() => void run(`return-${drone.id}`, () => emergencyReturnHome(drone.id), 'Emergency return initiated. Mission returned to queue.')}
+                  onClick={() => void run(`return-${drone.id}`, () => emergencyReturnHome(drone.id), t('management.returnInitiated'))}
                   disabled={Boolean(busy)}
                 >
-                  Return Home
+                  {t('management.returnHome')}
                 </DangerButton>
               )}
-              <DangerButton onClick={() => void run(`delete-${drone.id}`, () => deleteDrone(drone.id), 'Drone removed.')} disabled={Boolean(busy)}>
+              <DangerButton onClick={() => void run(`delete-${drone.id}`, () => deleteDrone(drone.id), t('management.droneRemoved'))} disabled={Boolean(busy)}>
                 <Trash2 size={14} />
               </DangerButton>
             </td>
@@ -137,6 +140,7 @@ function DronesView({ overview, busy, run }: ViewProps) {
 }
 
 function CustomersView({ overview, busy, run }: ViewProps) {
+  const { t } = useI18n()
   const [draft, setDraft] = useState({
     id: '',
     name: '',
@@ -147,20 +151,20 @@ function CustomersView({ overview, busy, run }: ViewProps) {
 
   function submit(event: FormEvent) {
     event.preventDefault()
-    void run('create-customer', () => createCustomer(draft), 'Customer added successfully.')
+    void run('create-customer', () => createCustomer(draft), t('management.customerAdded'))
   }
 
   return (
     <>
-      <ManagementHeader title="Customer Center" text="Manage senders and recipients used in delivery orders." />
-      <EntityForm title="Add Customer" onSubmit={submit} busy={busy === 'create-customer'}>
-        <input required placeholder="Customer ID" value={draft.id} onChange={(event) => setDraft({ ...draft, id: event.target.value })} />
-        <input required placeholder="Full name" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} />
-        <input required placeholder="Phone" value={draft.phone} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} />
-        <input required type="email" placeholder="Email" value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} />
+      <ManagementHeader title={t('management.customerTitle')} text={t('management.customerText')} />
+      <EntityForm title={t('management.addCustomer')} onSubmit={submit} busy={busy === 'create-customer'}>
+        <input required placeholder={t('management.customerId')} value={draft.id} onChange={(event) => setDraft({ ...draft, id: event.target.value })} />
+        <input required placeholder={t('management.fullName')} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} />
+        <input required placeholder={t('management.phone')} value={draft.phone} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} />
+        <input required type="email" placeholder={t('management.email')} value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} />
         <LocationInputs location={draft.location} onChange={(location) => setDraft({ ...draft, location })} />
       </EntityForm>
-      <DataTable columns={['Customer', 'Phone', 'Email', 'Address', 'Actions']}>
+      <DataTable columns={[t('management.customer'), t('management.phone'), t('management.email'), t('management.address'), t('management.actions')]}>
         {overview.customers.map((customer) => (
           <tr key={customer.id}>
             <td><strong>{customer.name}</strong><small>{customer.id}</small></td>
@@ -168,8 +172,8 @@ function CustomersView({ overview, busy, run }: ViewProps) {
             <td>{customer.email}</td>
             <td>{customer.location.label}</td>
             <td className="actions">
-              <ActionButton onClick={() => editCustomer(customer, run)} disabled={Boolean(busy)}>Edit</ActionButton>
-              <DangerButton onClick={() => void run(`delete-${customer.id}`, () => deleteCustomer(customer.id), 'Customer removed.')} disabled={Boolean(busy)}>
+              <ActionButton onClick={() => editCustomer(customer, run, t)} disabled={Boolean(busy)}>{t('management.edit')}</ActionButton>
+              <DangerButton onClick={() => void run(`delete-${customer.id}`, () => deleteCustomer(customer.id), t('management.customerRemoved'))} disabled={Boolean(busy)}>
                 <Trash2 size={14} />
               </DangerButton>
             </td>
@@ -181,6 +185,7 @@ function CustomersView({ overview, busy, run }: ViewProps) {
 }
 
 function StationsView({ overview, busy, run }: ViewProps) {
+  const { t } = useI18n()
   const [draft, setDraft] = useState({
     id: '',
     name: '',
@@ -190,28 +195,28 @@ function StationsView({ overview, busy, run }: ViewProps) {
 
   function submit(event: FormEvent) {
     event.preventDefault()
-    void run('create-station', () => createStation(draft), 'Charging station added.')
+    void run('create-station', () => createStation(draft), t('management.stationAdded'))
   }
 
   return (
     <>
-      <ManagementHeader title="Charging Stations" text="Control charging capacity and fleet service points." />
-      <EntityForm title="Add Station" onSubmit={submit} busy={busy === 'create-station'}>
-        <input required placeholder="Station ID" value={draft.id} onChange={(event) => setDraft({ ...draft, id: event.target.value })} />
-        <input required placeholder="Station name" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} />
-        <input required type="number" min="1" placeholder="Total slots" value={draft.totalSlots} onChange={(event) => setDraft({ ...draft, totalSlots: Number(event.target.value) })} />
+      <ManagementHeader title={t('management.stationTitle')} text={t('management.stationText')} />
+      <EntityForm title={t('management.addStation')} onSubmit={submit} busy={busy === 'create-station'}>
+        <input required placeholder={t('management.stationId')} value={draft.id} onChange={(event) => setDraft({ ...draft, id: event.target.value })} />
+        <input required placeholder={t('management.stationName')} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} />
+        <input required type="number" min="1" placeholder={t('management.totalSlots')} value={draft.totalSlots} onChange={(event) => setDraft({ ...draft, totalSlots: Number(event.target.value) })} />
         <LocationInputs location={draft.location} onChange={(location) => setDraft({ ...draft, location })} />
       </EntityForm>
-      <DataTable columns={['Station', 'Slots', 'Location', 'Availability', 'Actions']}>
+      <DataTable columns={[t('management.station'), t('management.slots'), t('management.location'), t('management.availability'), t('management.actions')]}>
         {overview.stations.map((station) => (
           <tr key={station.id}>
             <td><strong>{station.name}</strong><small>{station.id}</small></td>
             <td>{station.occupiedSlots}/{station.totalSlots}</td>
             <td>{station.location.label}</td>
-            <td>{station.totalSlots - station.occupiedSlots} ready</td>
+            <td>{t('management.readyCount', { value: station.totalSlots - station.occupiedSlots })}</td>
             <td className="actions">
-              <ActionButton onClick={() => editStation(station, run)} disabled={Boolean(busy)}>Edit</ActionButton>
-              <DangerButton onClick={() => void run(`delete-${station.id}`, () => deleteStation(station.id), 'Charging station removed.')} disabled={Boolean(busy)}>
+              <ActionButton onClick={() => editStation(station, run, t)} disabled={Boolean(busy)}>{t('management.edit')}</ActionButton>
+              <DangerButton onClick={() => void run(`delete-${station.id}`, () => deleteStation(station.id), t('management.stationRemoved'))} disabled={Boolean(busy)}>
                 <Trash2 size={14} />
               </DangerButton>
             </td>
@@ -223,6 +228,7 @@ function StationsView({ overview, busy, run }: ViewProps) {
 }
 
 function MissionsView({ overview, busy, run }: ViewProps) {
+  const { t } = useI18n()
   const available = overview.drones.filter((drone) => drone.status === 'available')
   const [selectedDroneId, setSelectedDroneId] = useState(available[0]?.id ?? '')
   const [draft, setDraft] = useState({
@@ -236,42 +242,42 @@ function MissionsView({ overview, busy, run }: ViewProps) {
 
   function submit(event: FormEvent) {
     event.preventDefault()
-    void run('create-mission', () => createMission(draft), 'New delivery created.')
+    void run('create-mission', () => createMission(draft), t('management.deliveryCreated'))
   }
 
   return (
     <>
-      <ManagementHeader title="Delivery Operations" text="Create orders and operate the full assign, pickup and delivery lifecycle." />
-      <EntityForm title="Add Delivery" onSubmit={submit} busy={busy === 'create-mission'}>
-        <input required placeholder="Mission ID" value={draft.id} onChange={(event) => setDraft({ ...draft, id: event.target.value })} />
+      <ManagementHeader title={t('management.deliveryTitle')} text={t('management.deliveryText')} />
+      <EntityForm title={t('management.addDelivery')} onSubmit={submit} busy={busy === 'create-mission'}>
+        <input required placeholder={t('management.missionId')} value={draft.id} onChange={(event) => setDraft({ ...draft, id: event.target.value })} />
         <select required value={draft.senderCustomerId} onChange={(event) => setDraft({ ...draft, senderCustomerId: event.target.value })}>
-          <option value="">Sender customer</option>
-          {overview.customers.map((customer) => <option value={customer.id} key={customer.id}>From: {customer.name}</option>)}
+          <option value="">{t('management.senderCustomer')}</option>
+          {overview.customers.map((customer) => <option value={customer.id} key={customer.id}>{t('management.fromCustomer', { value: customer.name })}</option>)}
         </select>
         <select required value={draft.targetCustomerId} onChange={(event) => setDraft({ ...draft, targetCustomerId: event.target.value })}>
-          <option value="">Recipient customer</option>
-          {overview.customers.map((customer) => <option value={customer.id} key={customer.id}>To: {customer.name}</option>)}
+          <option value="">{t('management.recipientCustomer')}</option>
+          {overview.customers.map((customer) => <option value={customer.id} key={customer.id}>{t('management.toCustomer', { value: customer.name })}</option>)}
         </select>
         <input required type="number" min="0.1" step="0.1" value={draft.payloadKg} onChange={(event) => setDraft({ ...draft, payloadKg: Number(event.target.value) })} />
         <select value={draft.priority} onChange={(event) => setDraft({ ...draft, priority: event.target.value as typeof draft.priority })}>
-          <option value="standard">Standard</option>
-          <option value="urgent">Urgent</option>
-          <option value="critical">Critical</option>
+          <option value="standard">{t('status.standard')}</option>
+          <option value="urgent">{t('status.urgent')}</option>
+          <option value="critical">{t('status.critical')}</option>
         </select>
         <input required type="number" min="1" value={draft.etaMinutes} onChange={(event) => setDraft({ ...draft, etaMinutes: Number(event.target.value) })} />
       </EntityForm>
       <div className="dispatch-control">
         <PlaneTakeoff size={17} />
-        Weather-approved dispatch drone
+        {t('management.weatherDispatch')}
         <select value={selectedDroneId} onChange={(event) => setSelectedDroneId(event.target.value)}>
           {available.map((drone) => <option key={drone.id} value={drone.id}>{drone.id} ({drone.battery}%)</option>)}
         </select>
       </div>
-      <DataTable columns={['Delivery', 'Route', 'Load', 'Drone', 'Status', 'Actions']}>
+      <DataTable columns={[t('management.delivery'), t('management.route'), t('management.load'), t('management.drone'), t('management.status'), t('management.actions')]}>
         {overview.missions.map((mission) => (
           <tr key={mission.id}>
             <td><strong>{mission.id}</strong><small>{mission.customer}</small></td>
-            <td>{mission.origin.label} to {mission.destination.label}</td>
+            <td>{mission.origin.label} {t('common.to')} {mission.destination.label}</td>
             <td>{mission.payloadKg} kg <Status value={mission.priority} /></td>
             <td>{mission.droneId ?? '-'}</td>
             <td><Status value={mission.status} /></td>
@@ -279,23 +285,23 @@ function MissionsView({ overview, busy, run }: ViewProps) {
               {mission.status === 'pending' && (
                 <ActionButton
                   disabled={!selectedDroneId || Boolean(busy)}
-                  onClick={() => void run(`dispatch-${mission.id}`, () => dispatchMission(selectedDroneId, mission.id), 'Weather check passed and drone dispatched.')}
+                  onClick={() => void run(`dispatch-${mission.id}`, () => dispatchMission(selectedDroneId, mission.id), t('management.dispatched'))}
                 >
-                  <PlaneTakeoff size={14} /> Dispatch
+                  <PlaneTakeoff size={14} /> {t('management.dispatch')}
                 </ActionButton>
               )}
               {mission.status === 'assigned' && (
-                <ActionButton onClick={() => void run(`pickup-${mission.id}`, () => pickupMission(mission.id), 'Package collected from sender.')} disabled={Boolean(busy)}>
-                  <Truck size={14} /> Pickup
+                <ActionButton onClick={() => void run(`pickup-${mission.id}`, () => pickupMission(mission.id), t('management.pickedUp'))} disabled={Boolean(busy)}>
+                  <Truck size={14} /> {t('management.pickup')}
                 </ActionButton>
               )}
               {mission.status === 'in-transit' && (
-                <ActionButton onClick={() => void run(`deliver-${mission.id}`, () => deliverMission(mission.id), 'Package delivered to customer.')} disabled={Boolean(busy)}>
-                  <PackageCheck size={14} /> Deliver
+                <ActionButton onClick={() => void run(`deliver-${mission.id}`, () => deliverMission(mission.id), t('management.delivered'))} disabled={Boolean(busy)}>
+                  <PackageCheck size={14} /> {t('management.deliver')}
                 </ActionButton>
               )}
               {(mission.status === 'pending' || mission.status === 'delivered') && (
-                <DangerButton onClick={() => void run(`delete-${mission.id}`, () => deleteMission(mission.id), 'Delivery removed.')} disabled={Boolean(busy)}>
+                <DangerButton onClick={() => void run(`delete-${mission.id}`, () => deleteMission(mission.id), t('management.deliveryRemoved'))} disabled={Boolean(busy)}>
                   <Trash2 size={14} />
                 </DangerButton>
               )}
@@ -312,15 +318,17 @@ function ManagementHeader({ title, text }: { title: string; text: string }) {
 }
 
 function EntityForm({ title, busy, children, onSubmit }: { title: string; busy: boolean; children: ReactNode; onSubmit: (event: FormEvent) => void }) {
-  return <form className="entity-form" onSubmit={onSubmit}><h3>{title}</h3><div className="form-grid">{children}<button className="primary" disabled={busy}><Plus size={16} />{busy ? 'Saving...' : 'Add'}</button></div></form>
+  const { t } = useI18n()
+  return <form className="entity-form" onSubmit={onSubmit}><h3>{title}</h3><div className="form-grid">{children}<button className="primary" disabled={busy}><Plus size={16} />{busy ? t('management.saving') : t('management.add')}</button></div></form>
 }
 
 function LocationInputs({ location, onChange }: { location: Location; onChange: (location: Location) => void }) {
+  const { t } = useI18n()
   return (
     <>
-      <input required placeholder="Location label" value={location.label} onChange={(event) => onChange({ ...location, label: event.target.value })} />
-      <input required type="number" step="any" placeholder="Latitude" value={location.latitude} onChange={(event) => onChange({ ...location, latitude: Number(event.target.value) })} />
-      <input required type="number" step="any" placeholder="Longitude" value={location.longitude} onChange={(event) => onChange({ ...location, longitude: Number(event.target.value) })} />
+      <input required placeholder={t('management.locationLabel')} value={location.label} onChange={(event) => onChange({ ...location, label: event.target.value })} />
+      <input required type="number" step="any" placeholder={t('management.latitude')} value={location.latitude} onChange={(event) => onChange({ ...location, latitude: Number(event.target.value) })} />
+      <input required type="number" step="any" placeholder={t('management.longitude')} value={location.longitude} onChange={(event) => onChange({ ...location, longitude: Number(event.target.value) })} />
     </>
   )
 }
@@ -330,7 +338,8 @@ function DataTable({ columns, children }: { columns: string[]; children: ReactNo
 }
 
 function Status({ value }: { value: string }) {
-  return <span className={`pill ${value}`}>{value}</span>
+  const { t } = useI18n()
+  return <span className={`pill ${value}`}>{t(`status.${value}`)}</span>
 }
 
 function ActionButton({ children, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
@@ -341,22 +350,22 @@ function DangerButton({ children, ...props }: ButtonHTMLAttributes<HTMLButtonEle
   return <button type="button" className="action danger" {...props}>{children}</button>
 }
 
-function editDrone(drone: Drone, run: ViewProps['run']) {
-  const model = window.prompt('Drone model', drone.model)
+function editDrone(drone: Drone, run: ViewProps['run'], t: Translate) {
+  const model = window.prompt(t('management.model'), drone.model)
   if (!model) return
-  void run(`edit-${drone.id}`, () => updateDrone(drone.id, { model }), 'Drone updated.')
+  void run(`edit-${drone.id}`, () => updateDrone(drone.id, { model }), t('management.droneUpdated'))
 }
 
-function editCustomer(customer: Customer, run: ViewProps['run']) {
-  const phone = window.prompt('Customer phone', customer.phone)
+function editCustomer(customer: Customer, run: ViewProps['run'], t: Translate) {
+  const phone = window.prompt(t('management.phone'), customer.phone)
   if (!phone) return
-  void run(`edit-${customer.id}`, () => updateCustomer(customer.id, { phone }), 'Customer updated.')
+  void run(`edit-${customer.id}`, () => updateCustomer(customer.id, { phone }), t('management.customerUpdated'))
 }
 
-function editStation(station: Station, run: ViewProps['run']) {
-  const slots = window.prompt('Total charging slots', station.totalSlots.toString())
+function editStation(station: Station, run: ViewProps['run'], t: Translate) {
+  const slots = window.prompt(t('management.totalSlots'), station.totalSlots.toString())
   if (!slots) return
-  void run(`edit-${station.id}`, () => updateStation(station.id, { totalSlots: Number(slots) }), 'Station updated.')
+  void run(`edit-${station.id}`, () => updateStation(station.id, { totalSlots: Number(slots) }), t('management.stationUpdated'))
 }
 
 function getErrorMessage(reason: unknown) {

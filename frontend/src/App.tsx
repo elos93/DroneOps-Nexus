@@ -250,7 +250,7 @@ function App() {
               <TileLayer attribution="&copy; OpenStreetMap" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               {data.stations.map((station) => (
                 <CircleMarker key={station.id} center={[station.location.latitude, station.location.longitude]} radius={10} pathOptions={{ color: '#38bdf8', fillColor: '#0284c7', fillOpacity: 1 }}>
-                  <Popup>{station.name} - {station.totalSlots - station.occupiedSlots} slots open</Popup>
+                  <Popup>{station.name} - {t('dashboard.slotsOpen', { value: station.totalSlots - station.occupiedSlots })}</Popup>
                 </CircleMarker>
               ))}
               {data.noFlyZones.map((zone) => (
@@ -265,7 +265,7 @@ function App() {
               ))}
               {data.drones.map((drone) => (
                 <CircleMarker key={drone.id} center={[drone.location.latitude, drone.location.longitude]} radius={7} pathOptions={{ color: '#0b1221', fillColor: statusColor(drone.status), fillOpacity: 1 }}>
-                  <Popup>{drone.id} - {drone.status} - {drone.battery}%</Popup>
+                  <Popup>{drone.id} - {t(`status.${drone.status}`)} - {drone.battery}%</Popup>
                 </CircleMarker>
               ))}
             </MapContainer>
@@ -339,16 +339,17 @@ function PanelTitle({ title, text }: { title: string; text: string }) {
 }
 
 function DecisionCard({ assessment }: { assessment: Awaited<ReturnType<typeof assessFlight>> }) {
+  const { t } = useI18n()
   return <div className={`decision ${assessment.decision.toLowerCase()}`}>
-    <div><strong>{assessment.decision}</strong><span>{assessment.wind.speedKmh} km/h wind - {assessment.wind.gustKmh} km/h gust</span></div>
+    <div><strong>{t(`decision.${assessment.decision}`)}</strong><span>{assessment.wind.speedKmh} {t('dashboard.wind')} - {assessment.wind.gustKmh} {t('dashboard.gust')}</span></div>
     <p>{assessment.reason}</p>
-    <div className="energy"><span>Route {assessment.routeDistanceKm} km</span><span>Required {assessment.batteryRequired}%</span><span>Available {assessment.availableBattery}%</span><span>x{assessment.energyMultiplier} energy</span></div>
+    <div className="energy"><span>{t('dashboard.routeDistance', { value: assessment.routeDistanceKm })}</span><span>{t('dashboard.requiredBattery', { value: assessment.batteryRequired })}</span><span>{t('dashboard.availableBattery', { value: assessment.availableBattery })}</span><span>{t('dashboard.energyMultiplier', { value: assessment.energyMultiplier })}</span></div>
   </div>
 }
 
 function MissionRow({ mission }: { mission: Mission }) {
   const { t } = useI18n()
-  return <div className="mission-row"><div><strong>{mission.id}</strong><small>{mission.customer}</small></div><p>{mission.origin.label} <span>{t('common.to')}</span> {mission.destination.label}</p><b className={mission.priority}>{mission.priority}</b><em className={mission.status}>{mission.status}</em></div>
+  return <div className="mission-row"><div><strong>{mission.id}</strong><small>{mission.customer}</small></div><p>{mission.origin.label} <span>{t('common.to')}</span> {mission.destination.label}</p><b className={mission.priority}>{t(`status.${mission.priority}`)}</b><em className={mission.status}>{t(`status.${mission.status}`)}</em></div>
 }
 
 function DroneRow({ drone }: { drone: Drone }) {

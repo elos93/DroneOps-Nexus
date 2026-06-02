@@ -1,6 +1,6 @@
 import { type FormEvent, type ReactNode, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { ArrowRight, HeartPulse, MapPinned, PlaneTakeoff, ShieldCheck, Zap } from 'lucide-react'
+import { ArrowRight, CreditCard, HeartPulse, MapPinned, PlaneTakeoff, ShieldCheck, Wallet, Zap } from 'lucide-react'
 import { createPublicOrder, quoteOrder } from './api'
 import { LanguageSwitcher, useI18n } from './i18n'
 import type { PublicOrderInput } from './types'
@@ -46,6 +46,7 @@ export function LandingPage({ onOpenControl, onBook }: LandingProps) {
 
 export function BookingPortal({ onBack, onOpenControl }: { onBack: () => void; onOpenControl: () => void }) {
   const { t } = useI18n()
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'bit' | 'paypal'>('card')
   const [draft, setDraft] = useState<PublicOrderInput>({
     senderName: 'Emergency Lab',
     senderEmail: 'lab@example.com',
@@ -82,45 +83,78 @@ export function BookingPortal({ onBack, onOpenControl }: { onBack: () => void; o
         </div>
         <form className="booking-form" onSubmit={calculate}>
           <h2>{t('booking.shipment')}</h2>
+          <div className="form-progress" aria-label={t('booking.stepsLabel')}>
+            <span className="active">1 {t('booking.stepSender')}</span>
+            <span>2 {t('booking.stepRecipient')}</span>
+            <span>3 {t('booking.stepPayment')}</span>
+          </div>
+          <h3 className="form-section-title">{t('booking.senderSection')}</h3>
           <div className="booking-fields">
             <label className="field-label">{t('booking.senderName')}
               <input required value={draft.senderName} onChange={(event) => setDraft({ ...draft, senderName: event.target.value })} placeholder={t('booking.senderName')} />
+              <span>{t('booking.senderNameHelp')}</span>
             </label>
             <label className="field-label">{t('booking.senderEmail')}
               <input required type="email" value={draft.senderEmail} onChange={(event) => setDraft({ ...draft, senderEmail: event.target.value })} placeholder={t('booking.senderEmail')} />
+              <span>{t('booking.senderEmailHelp')}</span>
             </label>
             <label className="field-label">{t('booking.senderPhone')}
-              <input required value={draft.senderPhone} onChange={(event) => setDraft({ ...draft, senderPhone: event.target.value })} placeholder={t('booking.senderPhone')} />
+              <input required type="tel" inputMode="tel" value={draft.senderPhone} onChange={(event) => setDraft({ ...draft, senderPhone: event.target.value })} placeholder="050-1234567" />
+              <span>{t('booking.senderPhoneHelp')}</span>
             </label>
+          </div>
+          <h3 className="form-section-title">{t('booking.recipientSection')}</h3>
+          <div className="booking-fields">
             <label className="field-label">{t('booking.recipientName')}
               <input required value={draft.recipientName} onChange={(event) => setDraft({ ...draft, recipientName: event.target.value })} placeholder={t('booking.recipientName')} />
+              <span>{t('booking.recipientNameHelp')}</span>
             </label>
             <label className="field-label">{t('booking.recipientEmail')}
               <input required type="email" value={draft.recipientEmail} onChange={(event) => setDraft({ ...draft, recipientEmail: event.target.value })} placeholder={t('booking.recipientEmail')} />
+              <span>{t('booking.recipientEmailHelp')}</span>
             </label>
             <label className="field-label">{t('booking.recipientPhone')}
-              <input required value={draft.recipientPhone} onChange={(event) => setDraft({ ...draft, recipientPhone: event.target.value })} placeholder={t('booking.recipientPhone')} />
+              <input required type="tel" inputMode="tel" value={draft.recipientPhone} onChange={(event) => setDraft({ ...draft, recipientPhone: event.target.value })} placeholder="050-7654321" />
+              <span>{t('booking.recipientPhoneHelp')}</span>
             </label>
+          </div>
+          <h3 className="form-section-title">{t('booking.routeSection')}</h3>
+          <div className="booking-fields">
             <label className="field-label">{t('booking.pickup')}
               <input required value={draft.origin.label} onChange={(event) => setDraft({ ...draft, origin: { ...draft.origin, label: event.target.value } })} placeholder={t('booking.pickup')} />
+              <span>{t('booking.pickupHelp')}</span>
             </label>
             <label className="field-label">{t('booking.destination')}
               <input required value={draft.destination.label} onChange={(event) => setDraft({ ...draft, destination: { ...draft.destination, label: event.target.value } })} placeholder={t('booking.destination')} />
+              <span>{t('booking.destinationHelp')}</span>
             </label>
             <label className="field-label">{t('booking.payloadKg')}
               <input type="number" min="0.1" step="0.1" value={draft.payloadKg} onChange={(event) => setDraft({ ...draft, payloadKg: Number(event.target.value) })} />
+              <span>{t('booking.payloadHelp')}</span>
             </label>
             <label className="field-label">{t('booking.priority')}
               <select value={draft.priority} onChange={(event) => setDraft({ ...draft, priority: event.target.value as PublicOrderInput['priority'] })}>
                 <option value="standard">{t('booking.standardPriority')}</option><option value="urgent">{t('booking.urgentPriority')}</option><option value="critical">{t('booking.criticalPriority')}</option>
               </select>
+              <span>{t('booking.priorityHelp')}</span>
             </label>
             <label className="field-label">{t('booking.deliveryType')}
               <select value={draft.serviceType} onChange={(event) => setDraft({ ...draft, serviceType: event.target.value as PublicOrderInput['serviceType'] })}>
                 <option value="standard">{t('booking.standardDelivery')}</option><option value="medical">{t('booking.medicalDelivery')}</option>
               </select>
+              <span>{t('booking.deliveryTypeHelp')}</span>
             </label>
             <label className="check"><input type="checkbox" checked={draft.temperatureControlled} onChange={(event) => setDraft({ ...draft, temperatureControlled: event.target.checked })} /> {t('booking.temperatureControlled')}</label>
+          </div>
+          <div className="payment-box">
+            <h3>{t('booking.paymentTitle')}</h3>
+            <p>{t('booking.paymentCopy')}</p>
+            <div className="payment-options">
+              <PaymentOption active={paymentMethod === 'card'} icon={<CreditCard size={18} />} title={t('booking.payCard')} text={t('booking.payCardHelp')} onClick={() => setPaymentMethod('card')} />
+              <PaymentOption active={paymentMethod === 'bit'} icon={<Wallet size={18} />} title={t('booking.payBit')} text={t('booking.payBitHelp')} onClick={() => setPaymentMethod('bit')} />
+              <PaymentOption active={paymentMethod === 'paypal'} icon={<Wallet size={18} />} title={t('booking.payPaypal')} text={t('booking.payPaypalHelp')} onClick={() => setPaymentMethod('paypal')} />
+            </div>
+            <small>{t('booking.paymentDemo')}</small>
           </div>
           <button className="primary" disabled={quote.isPending}> {quote.isPending ? t('booking.calculating') : t('booking.calculate')} </button>
         </form>
@@ -129,7 +163,7 @@ export function BookingPortal({ onBack, onOpenControl }: { onBack: () => void; o
           {!quote.data && <p className="empty-copy">{t('booking.emptyQuote')}</p>}
           {quote.data && <>
             <strong className="price">ILS {quote.data.priceIls}</strong>
-            <div className="quote-stats"><span>{quote.data.distanceKm} km</span><span>{quote.data.estimatedMinutes} min ETA</span><span>{quote.data.serviceType}</span></div>
+            <div className="quote-stats"><span>{quote.data.distanceKm} {t('common.km')}</span><span>{quote.data.estimatedMinutes} {t('common.min')} {t('common.eta')}</span><span>{t(`status.${quote.data.serviceType}`)}</span><span>{t(`booking.payment.${paymentMethod}`)}</span></div>
             <p className="route-note"><MapPinned size={15} /> {quote.data.routeNotice}</p>
             <button className="flight-button" disabled={order.isPending} onClick={() => order.mutate(draft)}>
               <PlaneTakeoff size={17} /> {order.isPending ? t('booking.confirming') : t('booking.confirm')}
@@ -139,6 +173,16 @@ export function BookingPortal({ onBack, onOpenControl }: { onBack: () => void; o
         </article>
       </section>
     </main>
+  )
+}
+
+function PaymentOption({ active, icon, title, text, onClick }: { active: boolean; icon: ReactNode; title: string; text: string; onClick: () => void }) {
+  return (
+    <button type="button" className={`payment-option ${active ? 'active' : ''}`} onClick={onClick}>
+      <span>{icon}</span>
+      <strong>{title}</strong>
+      <small>{text}</small>
+    </button>
   )
 }
 
