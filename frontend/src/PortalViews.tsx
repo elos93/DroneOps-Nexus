@@ -129,6 +129,7 @@ export function LandingPage({ onOpenControl, onBook }: LandingProps) {
 export function BookingPortal({ onBack, onOpenControl }: { onBack: () => void; onOpenControl: () => void }) {
   const { t } = useI18n()
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'bit' | 'paypal'>('card')
+  const [landingZone, setLandingZone] = useState('yard')
   const [pickupAddress, setPickupAddress] = useState<AddressFields>({ city: 'Tel Aviv', street: 'Central Medical Lab', houseNumber: '', apartment: '' })
   const [destinationAddress, setDestinationAddress] = useState<AddressFields>({ city: 'Tel Aviv', street: 'North Clinic', houseNumber: '', apartment: '' })
   const [draft, setDraft] = useState<PublicOrderInput>({
@@ -241,6 +242,25 @@ export function BookingPortal({ onBack, onOpenControl }: { onBack: () => void; o
               <span>{t('booking.deliveryTypeHelp')}</span>
             </label>
             <label className="check"><input type="checkbox" checked={draft.temperatureControlled} onChange={(event) => setDraft({ ...draft, temperatureControlled: event.target.checked })} /> {t('booking.temperatureControlled')}</label>
+          </div>
+          <div className="landing-zone-picker">
+            <h3>{t('booking.landingZoneTitle')}</h3>
+            <p>{t('booking.landingZoneCopy')}</p>
+            <div className="landing-zone-options">
+              {['yard', 'roof', 'entrance', 'balcony'].map((zone) => (
+                <button
+                  className={landingZone === zone ? 'active' : ''}
+                  key={zone}
+                  type="button"
+                  onClick={() => setLandingZone(zone)}
+                >
+                  <MapPinned size={16} />
+                  <strong>{t(`booking.landingZone.${zone}`)}</strong>
+                  <small>{t(`booking.landingZone.${zone}.help`)}</small>
+                </button>
+              ))}
+            </div>
+            <div className="landing-zone-status"><ShieldCheck size={16} /> {t('booking.landingZoneClear')}</div>
           </div>
           <div className="payment-box">
             <h3>{t('booking.paymentTitle')}</h3>

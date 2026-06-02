@@ -11,11 +11,14 @@ import {
   MapPinned,
   Menu,
   Moon,
+  Network,
   PlaneTakeoff,
   RadioTower,
   Route,
   Settings,
+  ShieldCheck,
   ShoppingBag,
+  Signal,
   Stethoscope,
   Sun,
   Users,
@@ -266,6 +269,13 @@ function App() {
           <BlackBoxPanel events={data.auditEvents} />
         </section>
 
+        <section className="autonomy-grid">
+          <GpsRiskPanel activeMissions={data.metrics.activeMissions} alerts={data.alerts.length} />
+          <SwarmIntelligencePanel drones={data.drones} />
+          <RegulationReadinessPanel auditEvents={data.auditEvents.length} noFlyZones={data.noFlyZones.length} />
+          <TelemetryPanel drones={data.drones} />
+        </section>
+
         <section className="operations-grid">
           <article className="panel map-panel">
             <PanelTitle title={t('dashboard.mapTitle')} text={t('dashboard.mapText')} />
@@ -280,6 +290,13 @@ function App() {
                     pathOptions={{ color: '#22d3ee', weight: 4, opacity: 0.68 }}
                   />
                 ))}
+              <Circle
+                center={[32.082, 34.797]}
+                radius={360}
+                pathOptions={{ color: '#8b5cf6', fillColor: '#8b5cf6', fillOpacity: 0.12, dashArray: '3 7' }}
+              >
+                <Popup>{t('dashboard.gpsJamZone')}</Popup>
+              </Circle>
               {data.stations.map((station) => (
                 <CircleMarker key={station.id} center={[station.location.latitude, station.location.longitude]} radius={10} pathOptions={{ color: '#38bdf8', fillColor: '#0284c7', fillOpacity: 1 }}>
                   <Popup>{station.name} - {t('dashboard.slotsOpen', { value: station.totalSlots - station.occupiedSlots })}</Popup>
@@ -481,6 +498,81 @@ function BlackBoxPanel({ events }: { events: Array<{ id: string; action: string;
   )
 }
 
+function GpsRiskPanel({ activeMissions, alerts }: { activeMissions: number; alerts: number }) {
+  const { t } = useI18n()
+  const gpsMode = alerts > 0 ? t('dashboard.gpsDegraded') : t('dashboard.gpsNominal')
+  return (
+    <article className="panel autonomy-panel">
+      <div className="autonomy-icon violet"><Signal size={20} /></div>
+      <div>
+        <h3>{t('dashboard.gpsRiskTitle')}</h3>
+        <p>{t('dashboard.gpsRiskText')}</p>
+      </div>
+      <div className="risk-meter">
+        <span>{t('dashboard.gpsMode')}</span>
+        <strong>{gpsMode}</strong>
+        <small>{t('dashboard.gpsMissions', { value: activeMissions })}</small>
+      </div>
+    </article>
+  )
+}
+
+function SwarmIntelligencePanel({ drones }: { drones: Drone[] }) {
+  const { t } = useI18n()
+  const missionDrones = drones.filter((drone) => drone.status === 'mission').length
+  return (
+    <article className="panel autonomy-panel">
+      <div className="autonomy-icon cyan"><Network size={20} /></div>
+      <div>
+        <h3>{t('dashboard.swarmTitle')}</h3>
+        <p>{t('dashboard.swarmText')}</p>
+      </div>
+      <div className="swarm-nodes" aria-hidden="true">
+        <i /><i /><i /><i />
+      </div>
+      <strong className="autonomy-alert">{t('dashboard.swarmAlert', { value: Math.max(3, missionDrones + 2) })}</strong>
+    </article>
+  )
+}
+
+function RegulationReadinessPanel({ auditEvents, noFlyZones }: { auditEvents: number; noFlyZones: number }) {
+  const { t } = useI18n()
+  return (
+    <article className="panel autonomy-panel">
+      <div className="autonomy-icon green"><ShieldCheck size={20} /></div>
+      <div>
+        <h3>{t('dashboard.regulationTitle')}</h3>
+        <p>{t('dashboard.regulationText')}</p>
+      </div>
+      <div className="regulation-badges">
+        <span>{t('dashboard.auditCoverage')}: {auditEvents}</span>
+        <span>{t('dashboard.noFlyCoverage')}: {noFlyZones}</span>
+        <span>{t('dashboard.ledgerVerified')}</span>
+      </div>
+    </article>
+  )
+}
+
+function TelemetryPanel({ drones }: { drones: Drone[] }) {
+  const { t } = useI18n()
+  const averageBattery = drones.length ? Math.round(drones.reduce((sum, drone) => sum + drone.battery, 0) / drones.length) : 0
+  const averageHealth = drones.length ? Math.round(drones.reduce((sum, drone) => sum + drone.batteryHealth, 0) / drones.length) : 0
+  return (
+    <article className="panel autonomy-panel telemetry-panel">
+      <div className="autonomy-icon amber"><RadioTower size={20} /></div>
+      <div>
+        <h3>{t('dashboard.telemetryTitle')}</h3>
+        <p>{t('dashboard.telemetryText')}</p>
+      </div>
+      <div className="telemetry-readouts">
+        <span>10Hz <small>{t('dashboard.telemetryRate')}</small></span>
+        <span>{averageBattery}% <small>{t('management.battery')}</small></span>
+        <span>{averageHealth}% <small>{t('dashboard.health')}</small></span>
+      </div>
+    </article>
+  )
+}
+
 function PanelTitle({ title, text }: { title: string; text: string }) {
   const { t } = useI18n()
   return <div className="panel-title"><div><h2>{title}</h2><p>{text}</p></div><span className="live">{t('common.live')}</span></div>
@@ -497,7 +589,7 @@ function DecisionCard({ assessment }: { assessment: Awaited<ReturnType<typeof as
 
 function MissionRow({ mission }: { mission: Mission }) {
   const { t } = useI18n()
-  return <div className="mission-row"><div><strong>{mission.id}</strong><small>{mission.customer}</small></div><p>{mission.origin.label} <span>{t('common.to')}</span> {mission.destination.label}</p><b className={mission.priority}>{t(`status.${mission.priority}`)}</b><em className={mission.status}>{t(`status.${mission.status}`)}</em></div>
+  return <div className="mission-row"><div><strong>{mission.id}</strong><small>{mission.customer}</small></div><p>{mission.origin.label} <span>{t('common.to')}</span> {mission.destination.label}</p><b className={mission.priority}>{t(`status.${mission.priority}`)}</b><em className={mission.status}>{t(`status.${mission.status}`)}</em><span className="verified-ledger">{t('dashboard.ledgerVerified')}</span></div>
 }
 
 function DroneRow({ drone }: { drone: Drone }) {
@@ -508,6 +600,7 @@ function DroneRow({ drone }: { drone: Drone }) {
       <div>
         <strong>{drone.id}</strong>
         <small>{drone.model}</small>
+        <span className="verified-ledger mini">{t('dashboard.ledgerVerified')}</span>
       </div>
       <div className="drone-health">
         <span>{t(`status.${drone.status}`)}</span>

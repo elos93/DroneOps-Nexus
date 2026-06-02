@@ -7,7 +7,10 @@ import {
   ClipboardList,
   MapPinned,
   Printer,
+  QrCode,
+  Radar,
   ShieldAlert,
+  ShieldCheck,
   Stethoscope,
   Plus,
   Trash2,
@@ -216,6 +219,30 @@ function TrackingView({ overview, onRefresh, role }: Pick<Props, 'overview' | 'o
                 {result.demoConfirmationCode && <small>{t('advanced.demoOtp')}: {result.demoConfirmationCode}</small>}
               </div>
             )}
+            <div className="handover-card">
+              <QrCode size={22} />
+              <div>
+                <strong>{t('advanced.secureHandover')}</strong>
+                <p>{t('advanced.secureHandoverText')}</p>
+              </div>
+              <span>{result.demoConfirmationCode ?? result.mission.proofOfDeliveryCode ?? 'OTP'}</span>
+            </div>
+          </article>
+          <article className="panel sky-radar-card">
+            <h3 className="section-heading"><Radar size={17} /> {t('advanced.skyRadar')}</h3>
+            <div className="sky-radar">
+              <span className="radar-ring ring-one" />
+              <span className="radar-ring ring-two" />
+              <span className="radar-ring ring-three" />
+              <span className="radar-sweep" />
+              <i style={{ insetInlineStart: `${Math.min(82, 16 + result.mission.progressPercent * 0.7)}%` }} />
+            </div>
+            <div className="radar-readouts">
+              <span>{t('advanced.airTime')}: <b>{result.estimatedArrivalMinutes} {t('common.min')}</b></span>
+              <span>{t('advanced.flightAltitude')}: <b>45m</b></span>
+              <span>{t('advanced.ledgerStatus')}: <b>{t('dashboard.ledgerVerified')}</b></span>
+            </div>
+            <p className="radar-note"><ShieldCheck size={15} /> {t('advanced.approachNotice')}</p>
           </article>
           <article className="panel">
             <h3 className="section-heading"><ClipboardList size={17} /> {t('advanced.missionTimeline')}</h3>
