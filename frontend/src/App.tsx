@@ -371,7 +371,7 @@ function statusColor(status: Drone['status']) {
 
 function LoadingPanel() {
   const { t } = useI18n()
-  return <div className="state"><div className="spinner" /><h1>{t('common.loading')}</h1><p>{t('common.connecting')}</p></div>
+  return <div className="state branded-loading"><div className="loading-orbit"><span /><PlaneTakeoff /></div><h1>{t('common.loading')}</h1><p>{t('common.connecting')}</p></div>
 }
 
 function ErrorPanel({ onRetry }: { onRetry: () => void }) {

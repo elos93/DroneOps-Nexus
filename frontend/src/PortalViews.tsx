@@ -77,6 +77,45 @@ export function LandingPage({ onOpenControl, onBook }: LandingProps) {
         <Feature icon={<MapPinned />} title={t('landing.smartRoutes')} text={t('landing.smartRoutesText')} />
         <Feature icon={<Zap />} title={t('landing.liveDecisions')} text={t('landing.liveDecisionsText')} />
       </section>
+      <section className="visual-showcase" aria-label={t('landing.visualShowcase')}>
+        <article className="visual-card city-visual">
+          <div className="city-skyline" aria-hidden="true"><i /><i /><i /><i /><i /></div>
+          <span className="visual-route" />
+          <PlaneTakeoff className="visual-drone" />
+          <strong>{t('landing.visualCity')}</strong>
+          <p>{t('landing.visualCityText')}</p>
+        </article>
+        <article className="visual-card medical-visual">
+          <div className="medical-crate" aria-hidden="true"><span /></div>
+          <HeartPulse className="visual-heart" />
+          <strong>{t('landing.visualMedical')}</strong>
+          <p>{t('landing.visualMedicalText')}</p>
+        </article>
+        <article className="visual-card dashboard-visual">
+          <div className="mock-window" aria-hidden="true">
+            <span /><span /><span />
+            <i />
+          </div>
+          <strong>{t('landing.visualDashboard')}</strong>
+          <p>{t('landing.visualDashboardText')}</p>
+        </article>
+      </section>
+      <section className="capability-lab" aria-label={t('landing.capabilityLab')}>
+        <div className="capability-heading">
+          <p className="eyebrow">{t('landing.capabilityEyebrow')}</p>
+          <h2>{t('landing.capabilityTitle')}</h2>
+          <p>{t('landing.capabilityText')}</p>
+        </div>
+        <div className="capability-grid">
+          <Capability icon={<PlaneTakeoff />} title={t('landing.capabilityTether')} text={t('landing.capabilityTetherText')} />
+          <Capability icon={<Radar />} title={t('landing.capabilityFleet')} text={t('landing.capabilityFleetText')} />
+          <Capability icon={<Wallet />} title={t('landing.capabilityHeavy')} text={t('landing.capabilityHeavyText')} />
+          <Capability icon={<Zap />} title={t('landing.capabilityEdge')} text={t('landing.capabilityEdgeText')} />
+          <Capability icon={<MapPinned />} title={t('landing.capabilityRouting')} text={t('landing.capabilityRoutingText')} />
+          <Capability icon={<CreditCard />} title={t('landing.capabilityNest')} text={t('landing.capabilityNestText')} />
+          <Capability icon={<ShieldCheck />} title={t('landing.capabilityCyber')} text={t('landing.capabilityCyberText')} />
+        </div>
+      </section>
       <section className="experience-strip">
         <div><strong>01</strong><span>{t('landing.flowRequest')}</span></div>
         <div><strong>02</strong><span>{t('landing.flowAssess')}</span></div>
@@ -417,6 +456,10 @@ function PaymentOption({ active, icon, title, text, onClick }: { active: boolean
 
 function BrandLogo() {
   return <div className="logo brand-logo"><span className="logo-mark" /><div><strong>DroneOps</strong><small>NEXUS</small></div></div>
+}
+
+function Capability({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
+  return <article><span>{icon}</span><div><strong>{title}</strong><p>{text}</p></div></article>
 }
 
 function Feature({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
