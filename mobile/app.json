@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "DroneOps Nexus",
-    "slug": "droneops-nexus-mobile",
+    "slug": "droneops-nexus",
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
@@ -16,7 +16,11 @@
       }
     },
     "extra": {
-      "apiUrl": "https://droneops-nexus-api.vercel.app/api"
-    }
+      "apiUrl": "https://droneops-nexus-api.vercel.app/api",
+      "eas": {
+        "projectId": "80455436-38a7-460c-b6ec-d8794f9f4dd2"
+      }
+    },
+    "owner": "elos93s-organization"
   }
 }
