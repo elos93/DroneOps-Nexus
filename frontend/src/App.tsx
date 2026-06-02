@@ -184,7 +184,11 @@ function App() {
       </button>
       <aside className={`sidebar ${mobileMenuOpen ? 'open' : ''}`}>
         <button className="mobile-close" aria-label="Close navigation" onClick={() => setMobileMenuOpen(false)}><X size={20} /></button>
-        <div className="logo"><span className="logo-mark" /><div><strong>DroneOps</strong><small>NEXUS</small></div></div>
+        <div className="logo brand-logo"><span className="logo-mark" /><div><strong>DroneOps</strong><small>NEXUS</small></div></div>
+        <div className="ops-pulse">
+          <span />
+          <div><strong>{t('nav.opsLive')}</strong><small>{t('nav.opsLiveText')}</small></div>
+        </div>
         <nav>
           <button className={activeView === 'dashboard' ? 'active' : ''} onClick={() => changeView('dashboard')}><Activity size={19} /> {t('nav.dashboard')}</button>
           <button onClick={() => navigate('book')}><ShoppingBag size={19} /> {t('nav.bookDelivery')}</button>
@@ -219,6 +223,11 @@ function App() {
       </aside>
 
       <main className="dashboard">
+        <div className="command-ribbon">
+          <span>{t('header.commandMode')}</span>
+          <b>{t('header.confidence')}</b>
+          <small>{t('header.humanFriendly')}</small>
+        </div>
         <header className="header">
           <div>
             <p className="eyebrow">{t('header.eyebrow')}</p>

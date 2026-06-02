@@ -1,6 +1,6 @@
 import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { ArrowRight, CreditCard, HeartPulse, MapPinned, PlaneTakeoff, ShieldCheck, Wallet, Zap } from 'lucide-react'
+import { ArrowRight, CreditCard, HeartPulse, MapPinned, PlaneTakeoff, Radar, ShieldCheck, Wallet, Zap } from 'lucide-react'
 import { createPublicOrder, quoteOrder } from './api'
 import { LanguageSwitcher, useI18n } from './i18n'
 import type { Location, PublicOrderInput } from './types'
@@ -32,11 +32,16 @@ export function LandingPage({ onOpenControl, onBook }: LandingProps) {
   return (
     <main className="landing">
       <header className="landing-nav">
-        <div className="logo"><span className="logo-mark" /><div><strong>DroneOps</strong><small>NEXUS</small></div></div>
+        <BrandLogo />
         <div><LanguageSwitcher /><button className="ghost" onClick={onOpenControl}>{t('landing.console')}</button><button className="primary" onClick={onBook}>{t('landing.book')}</button></div>
       </header>
       <section className="hero">
         <div>
+          <div className="trust-row">
+            <span>{t('landing.trustMedical')}</span>
+            <span>{t('landing.trustWeather')}</span>
+            <span>{t('landing.trustTracking')}</span>
+          </div>
           <p className="eyebrow">{t('landing.eyebrow')}</p>
           <h1>{t('landing.title')}</h1>
           <p className="hero-copy">{t('landing.copy')}</p>
@@ -45,9 +50,24 @@ export function LandingPage({ onOpenControl, onBook }: LandingProps) {
             <button className="ghost" onClick={onOpenControl}>{t('landing.explore')}</button>
           </div>
         </div>
-        <article className="hero-card">
-          <div className="flight-line"><PlaneTakeoff /><span>{t('landing.priorityMission')}</span><b>{t('landing.ready')}</b></div>
+        <article className="hero-card mission-control-card">
+          <div className="radar-visual" aria-hidden="true">
+            <span className="radar-ring ring-one" />
+            <span className="radar-ring ring-two" />
+            <span className="radar-ring ring-three" />
+            <span className="radar-sweep" />
+            <span className="drone-dot dot-a" />
+            <span className="drone-dot dot-b" />
+            <span className="drone-dot dot-c" />
+            <PlaneTakeoff />
+          </div>
+          <div className="flight-line"><Radar /><span>{t('landing.priorityMission')}</span><b>{t('landing.ready')}</b></div>
           <h2>{t('landing.origin')} <span>{t('common.to')}</span> {t('landing.destination')}</h2>
+          <div className="mission-path">
+            <span>{t('landing.originShort')}</span>
+            <i />
+            <span>{t('landing.destinationShort')}</span>
+          </div>
           <div className="hero-stats"><strong>6 {t('landing.min')}<small>{t('landing.eta')}</small></strong><strong>94%<small>{t('landing.battery')}</small></strong><strong>GO<small>{t('landing.windGate')}</small></strong></div>
           <p><ShieldCheck size={16} /> {t('landing.coldChain')}</p>
         </article>
@@ -56,6 +76,12 @@ export function LandingPage({ onOpenControl, onBook }: LandingProps) {
         <Feature icon={<HeartPulse />} title={t('landing.medicalPriority')} text={t('landing.medicalText')} />
         <Feature icon={<MapPinned />} title={t('landing.smartRoutes')} text={t('landing.smartRoutesText')} />
         <Feature icon={<Zap />} title={t('landing.liveDecisions')} text={t('landing.liveDecisionsText')} />
+      </section>
+      <section className="experience-strip">
+        <div><strong>01</strong><span>{t('landing.flowRequest')}</span></div>
+        <div><strong>02</strong><span>{t('landing.flowAssess')}</span></div>
+        <div><strong>03</strong><span>{t('landing.flowLaunch')}</span></div>
+        <div><strong>04</strong><span>{t('landing.flowTrack')}</span></div>
       </section>
     </main>
   )
@@ -387,6 +413,10 @@ function PaymentOption({ active, icon, title, text, onClick }: { active: boolean
       <small>{text}</small>
     </button>
   )
+}
+
+function BrandLogo() {
+  return <div className="logo brand-logo"><span className="logo-mark" /><div><strong>DroneOps</strong><small>NEXUS</small></div></div>
 }
 
 function Feature({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
