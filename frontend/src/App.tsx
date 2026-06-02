@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from 'recharts'
 import { Circle, CircleMarker, MapContainer, Popup, TileLayer } from 'react-leaflet'
@@ -29,6 +29,8 @@ import { ManagementViews, type View } from './ManagementViews'
 import { BookingPortal, LandingPage } from './PortalViews'
 import type { AuthSession, Drone, Mission } from './types'
 
+type UserRole = AuthSession['user']['role']
+
 const storedSession = (() => {
   try {
     const value = localStorage.getItem('droneops-session')
@@ -39,6 +41,49 @@ const storedSession = (() => {
 })()
 setAuthToken(storedSession?.accessToken)
 
+type PortalView = 'landing' | 'control' | 'book'
+type ControlView = View | AdvancedView
+
+const controlViews = new Set<ControlView>([
+  'dashboard',
+  'drones',
+  'missions',
+  'customers',
+  'stations',
+  'intelligence',
+  'tracking',
+  'maintenance',
+  'audit',
+])
+
+function readRoute(): { portalView: PortalView; controlView: ControlView } {
+  const [section, detail] = window.location.hash.replace(/^#\/?/, '').split('/')
+  if (section === 'book') {
+    return { portalView: 'book', controlView: 'dashboard' }
+  }
+  if (section === 'control') {
+    const nextView = controlViews.has(detail as ControlView) ? (detail as ControlView) : 'dashboard'
+    return { portalView: 'control', controlView: nextView }
+  }
+  return { portalView: 'landing', controlView: 'dashboard' }
+}
+
+function writeRoute(portalView: PortalView, controlView: ControlView = 'dashboard') {
+  const nextHash =
+    portalView === 'landing' ? '#/' : portalView === 'book' ? '#/book' : `#/control/${controlView}`
+  if (window.location.hash !== nextHash) {
+    window.location.hash = nextHash
+  }
+}
+
+function canOpenControlView(view: ControlView, role: UserRole) {
+  if (role === 'admin') return true
+  if (role === 'dispatcher') {
+    return !['customers', 'maintenance', 'audit'].includes(view)
+  }
+  return ['dashboard', 'intelligence', 'tracking'].includes(view)
+}
+
 function App() {
   const { t } = useI18n()
   const { data, isLoading, isError, refetch } = useQuery({
@@ -48,11 +93,12 @@ function App() {
   })
   const [selectedMissionId, setSelectedMissionId] = useState<string>()
   const [selectedDroneId, setSelectedDroneId] = useState<string>()
-  const [view, setView] = useState<View | AdvancedView>('dashboard')
+  const [view, setView] = useState<ControlView>(() => readRoute().controlView)
   const [lightMode, setLightMode] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [portalView, setPortalView] = useState<'landing' | 'control' | 'book'>('landing')
+  const [portalView, setPortalView] = useState<PortalView>(() => readRoute().portalView)
   const [session, setSession] = useState<AuthSession | undefined>(storedSession)
+  const role = session?.user.role
   const flightGate = useMutation({
     mutationFn: ({ droneId, missionId }: { droneId: string; missionId: string }) =>
       assessFlight(droneId, missionId),
@@ -70,16 +116,43 @@ function App() {
     [data],
   )
 
+  useEffect(() => {
+    const syncRoute = () => {
+      const nextRoute = readRoute()
+      setPortalView(nextRoute.portalView)
+      setView(nextRoute.controlView)
+      setMobileMenuOpen(false)
+    }
+    if (!window.location.hash) {
+      writeRoute('landing')
+    }
+    window.addEventListener('hashchange', syncRoute)
+    return () => window.removeEventListener('hashchange', syncRoute)
+  }, [])
+
+  const navigate = useCallback((nextPortalView: PortalView, nextControlView: ControlView = 'dashboard') => {
+    setPortalView(nextPortalView)
+    setView(nextControlView)
+    setMobileMenuOpen(false)
+    writeRoute(nextPortalView, nextControlView)
+  }, [])
+
+  useEffect(() => {
+    if (portalView === 'control' && role && !canOpenControlView(view, role)) {
+      writeRoute('control')
+    }
+  }, [portalView, role, view])
+
   if (portalView === 'landing') {
-    return <LandingPage onOpenControl={() => setPortalView('control')} onBook={() => setPortalView('book')} />
+    return <LandingPage onOpenControl={() => navigate('control')} onBook={() => navigate('book')} />
   }
   if (portalView === 'book') {
-    return <BookingPortal onBack={() => setPortalView('landing')} onOpenControl={() => setPortalView('control')} />
+    return <BookingPortal onBack={() => navigate('landing')} onOpenControl={() => navigate('control')} />
   }
   if (!session) {
     return (
       <AuthView
-        onBack={() => setPortalView('landing')}
+        onBack={() => navigate('landing')}
         onAuthenticated={(nextSession) => {
           localStorage.setItem('droneops-session', JSON.stringify(nextSession))
           setAuthToken(nextSession.accessToken)
@@ -98,10 +171,10 @@ function App() {
   }
 
   const changeView = (nextView: View | AdvancedView) => {
-    setView(nextView)
-    setMobileMenuOpen(false)
+    navigate('control', nextView)
   }
-  const role = session.user.role
+  const activeRole = session.user.role
+  const activeView = canOpenControlView(view, activeRole) ? view : 'dashboard'
 
   return (
     <div className={`app-shell ${lightMode ? 'light-mode' : ''}`}>
@@ -113,22 +186,22 @@ function App() {
         <button className="mobile-close" aria-label="Close navigation" onClick={() => setMobileMenuOpen(false)}><X size={20} /></button>
         <div className="logo"><span className="logo-mark" /><div><strong>DroneOps</strong><small>NEXUS</small></div></div>
         <nav>
-          <button className={view === 'dashboard' ? 'active' : ''} onClick={() => changeView('dashboard')}><Activity size={19} /> {t('nav.dashboard')}</button>
-          <button onClick={() => setPortalView('book')}><ShoppingBag size={19} /> {t('nav.bookDelivery')}</button>
-          {role !== 'customer' && <button className={view === 'drones' ? 'active' : ''} onClick={() => changeView('drones')}><MapPinned size={19} /> {t('nav.drones')}</button>}
-          {role !== 'customer' && <button className={view === 'missions' ? 'active' : ''} onClick={() => changeView('missions')}><Route size={19} /> {t('nav.missions')}</button>}
-          {role === 'admin' && <button className={view === 'customers' ? 'active' : ''} onClick={() => changeView('customers')}><Users size={19} /> {t('nav.customers')}</button>}
-          {role !== 'customer' && <button className={view === 'stations' ? 'active' : ''} onClick={() => changeView('stations')}><RadioTower size={19} /> {t('nav.stations')}</button>}
-          <button className={view === 'intelligence' ? 'active' : ''} onClick={() => changeView('intelligence')}><BrainCircuit size={19} /> {t('nav.intelligence')}</button>
-          <button className={view === 'tracking' ? 'active' : ''} onClick={() => changeView('tracking')}><MapPinned size={19} /> {t('nav.tracking')}</button>
-          {role === 'admin' && <button className={view === 'maintenance' ? 'active' : ''} onClick={() => changeView('maintenance')}><Stethoscope size={19} /> {t('nav.maintenance')}</button>}
-          {role === 'admin' && <button className={view === 'audit' ? 'active' : ''} onClick={() => changeView('audit')}><ClipboardList size={19} /> {t('nav.audit')}</button>}
+          <button className={activeView === 'dashboard' ? 'active' : ''} onClick={() => changeView('dashboard')}><Activity size={19} /> {t('nav.dashboard')}</button>
+          <button onClick={() => navigate('book')}><ShoppingBag size={19} /> {t('nav.bookDelivery')}</button>
+          {activeRole !== 'customer' && <button className={activeView === 'drones' ? 'active' : ''} onClick={() => changeView('drones')}><MapPinned size={19} /> {t('nav.drones')}</button>}
+          {activeRole !== 'customer' && <button className={activeView === 'missions' ? 'active' : ''} onClick={() => changeView('missions')}><Route size={19} /> {t('nav.missions')}</button>}
+          {activeRole === 'admin' && <button className={activeView === 'customers' ? 'active' : ''} onClick={() => changeView('customers')}><Users size={19} /> {t('nav.customers')}</button>}
+          {activeRole !== 'customer' && <button className={activeView === 'stations' ? 'active' : ''} onClick={() => changeView('stations')}><RadioTower size={19} /> {t('nav.stations')}</button>}
+          <button className={activeView === 'intelligence' ? 'active' : ''} onClick={() => changeView('intelligence')}><BrainCircuit size={19} /> {t('nav.intelligence')}</button>
+          <button className={activeView === 'tracking' ? 'active' : ''} onClick={() => changeView('tracking')}><MapPinned size={19} /> {t('nav.tracking')}</button>
+          {activeRole === 'admin' && <button className={activeView === 'maintenance' ? 'active' : ''} onClick={() => changeView('maintenance')}><Stethoscope size={19} /> {t('nav.maintenance')}</button>}
+          {activeRole === 'admin' && <button className={activeView === 'audit' ? 'active' : ''} onClick={() => changeView('audit')}><ClipboardList size={19} /> {t('nav.audit')}</button>}
         </nav>
         <div className="sidebar-footer">
           <LanguageSwitcher />
           <label className="role-switch">{t('nav.role')}
-            <select value={role} disabled>
-              <option value={role}>{session.user.name} ({role})</option>
+            <select value={activeRole} disabled>
+              <option value={activeRole}>{session.user.name} ({activeRole})</option>
             </select>
           </label>
           <button
@@ -149,7 +222,7 @@ function App() {
         <header className="header">
           <div>
             <p className="eyebrow">{t('header.eyebrow')}</p>
-            <h1>{view === 'dashboard' ? t('header.dashboard') : translatedViewTitle(view, t)}</h1>
+            <h1>{activeView === 'dashboard' ? t('header.dashboard') : translatedViewTitle(activeView, t)}</h1>
             <p className="subtitle">{t('header.subtitle')}</p>
           </div>
           <div className="header-actions">
@@ -158,11 +231,11 @@ function App() {
             </button>
             <button className="icon-button" onClick={() => setLightMode((enabled) => !enabled)}>{lightMode ? <Moon size={18} /> : <Sun size={18} />}</button>
             <button className="primary" onClick={() => refetch()}>{t('header.refresh')}</button>
-            <button className="icon-button" aria-label="Return to landing page" onClick={() => setPortalView('landing')}><PlaneTakeoff size={18} /></button>
+            <button className="icon-button" aria-label="Return to landing page" onClick={() => navigate('landing')}><PlaneTakeoff size={18} /></button>
           </div>
         </header>
 
-        {view === 'dashboard' ? <>
+        {activeView === 'dashboard' ? <>
         <section className="metrics">
           <Metric label={t('metrics.totalDrones')} value={data.metrics.totalDrones} hint={t('metrics.registeredFleet')} accent="blue" />
           <Metric label={t('metrics.activeMissions')} value={data.metrics.activeMissions} hint={t('metrics.inProgress')} accent="cyan" />
@@ -248,9 +321,9 @@ function App() {
             {data.drones.map((drone) => <DroneRow key={drone.id} drone={drone} />)}
           </article>
         </section>
-        </> : view === 'drones' || view === 'missions' || view === 'customers' || view === 'stations'
-          ? <ManagementViews view={view} overview={data} onRefresh={refetch} />
-          : <AdvancedViews view={view} overview={data} onRefresh={refetch} role={role} />}
+        </> : activeView === 'drones' || activeView === 'missions' || activeView === 'customers' || activeView === 'stations'
+          ? <ManagementViews view={activeView} overview={data} onRefresh={refetch} />
+          : <AdvancedViews view={activeView} overview={data} onRefresh={refetch} role={activeRole} />}
       </main>
     </div>
   )

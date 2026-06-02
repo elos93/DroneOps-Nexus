@@ -19,9 +19,12 @@
 }
 
 * { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
 body { margin: 0; min-width: 320px; background: var(--bg); }
 button, input, select { font: inherit; }
-button { border: 0; cursor: pointer; }
+button { border: 0; cursor: pointer; transition: transform .16s ease, border-color .16s ease, background .16s ease, color .16s ease, box-shadow .16s ease; }
+button:hover { transform: translateY(-1px); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid rgba(34,211,238,.7); outline-offset: 3px; }
 .language-switcher { min-width: 142px; display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; font-weight: 700; }
 .language-switcher select { height: 38px; padding: 0 10px; border: 1px solid var(--border); border-radius: 9px; color: #dae7f7; background: #101f35; }
 html[dir="rtl"] body { direction: rtl; }
@@ -33,7 +36,7 @@ html[dir="rtl"] .metric::after { inset: auto auto -55px -35px; }
 html[dir="rtl"] .timeline > div { padding: 3px 29px 14px 0; border-left: 0; border-right: 1px solid var(--border); }
 html[dir="rtl"] .timeline svg { left: auto; right: -9px; }
 .ghost { height: 45px; padding: 0 19px; border: 1px solid var(--border); border-radius: 11px; color: #dbeafe; background: transparent; font-weight: 600; }
-.landing, .booking { min-height: 100vh; padding: 30px clamp(18px, 6vw, 92px) 52px; background: radial-gradient(circle at 70% 4%, rgba(34,211,238,.14), transparent 34%), #070f1e; }
+.landing, .booking { min-height: 100vh; padding: 30px clamp(18px, 6vw, 92px) 52px; background: radial-gradient(circle at 70% 4%, rgba(34,211,238,.14), transparent 34%), #070f1e; animation: pageIn .22s ease both; }
 .landing-nav { max-width: 1340px; margin: 0 auto 64px; display: flex; justify-content: space-between; align-items: center; gap: 14px; }
 .landing-nav .logo { margin: 0; }
 .landing-nav > div:last-child { display: flex; gap: 12px; align-items: center; }
@@ -96,7 +99,8 @@ html[dir="rtl"] .timeline svg { left: auto; right: -9px; }
 .logo-mark { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(145deg, #28dbdd, #1685ba); box-shadow: 0 0 24px rgba(34,211,238,.25); }
 .sidebar nav { display: grid; gap: 8px; }
 .sidebar a, .sidebar button { height: 48px; padding: 0 14px; display: flex; gap: 13px; align-items: center; border-radius: 11px; color: var(--muted); background: transparent; font-size: 14px; font-weight: 500; }
-.sidebar a.active, .sidebar button.active { color: var(--cyan); background: rgba(34,211,238,.11); }
+.sidebar a.active, .sidebar button.active { color: var(--cyan); background: rgba(34,211,238,.11); box-shadow: inset 3px 0 0 var(--cyan); }
+html[dir="rtl"] .sidebar a.active, html[dir="rtl"] .sidebar button.active { box-shadow: inset -3px 0 0 var(--cyan); }
 .sidebar-footer { margin-top: auto; }
 .role-switch { display: grid; gap: 7px; margin: 0 10px 15px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .role-switch select { height: 39px; padding: 0 9px; border: 1px solid var(--border); border-radius: 8px; color: #dbe8f9; background: #101f35; font-size: 12px; text-transform: none; }
@@ -104,7 +108,7 @@ html[dir="rtl"] .timeline svg { left: auto; right: -9px; }
 .sidebar-footer .language-switcher select { width: 100%; }
 .sidebar-footer p { margin: 22px 10px 0; padding: 13px; color: var(--muted); background: #0e1c30; border: 1px solid var(--border); border-radius: 11px; font-size: 11px; line-height: 1.55; }
 .mobile-menu-button, .mobile-close, .menu-backdrop { display: none; }
-.dashboard { min-width: 0; padding: 33px 38px 38px; }
+.dashboard { min-width: 0; padding: 33px 38px 38px; animation: pageIn .22s ease both; }
 .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; }
 .eyebrow { margin: 0 0 7px; color: var(--cyan); font-size: 11px; letter-spacing: .2em; font-weight: 700; text-transform: uppercase; }
 h1 { margin: 0 0 7px; font-size: 32px; letter-spacing: -.055em; }
@@ -278,6 +282,10 @@ h1 { margin: 0 0 7px; font-size: 32px; letter-spacing: -.055em; }
 .state p { color: var(--muted); margin-bottom: 20px; }
 .spinner { width: 42px; height: 42px; margin: 0 auto; border: 3px solid #17283f; border-top-color: var(--cyan); border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 @media (max-width: 1160px) {
   .hero, .booking-layout { grid-template-columns: 1fr; }
   .booking-heading { max-width: 640px; }
